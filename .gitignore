@@ -1,0 +1,7 @@
+node_modules/
+.env
+*.log
+.DS_Store
+miljonaaripeli.db
+miljonaaripeli.db-wal
+miljonaaripeli.db-shm

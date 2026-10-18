@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hallintapaneeli — Miljonaaripeli</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0d0d0d;
+      color: #e5e5e5;
+      padding: 20px;
+    }
+    h1 { color: #ffd700; margin-bottom: 4px; }
+    h2 { color: #93c5fd; margin: 20px 0 10px; font-size: 1.1rem; }
+    .subtitle { color: #666; margin-bottom: 20px; font-size: 0.85rem; }
+
+    nav { margin-bottom: 16px; display: flex; gap: 12px; }
+    nav a { color: #60a5fa; text-decoration: none; font-size: 0.9rem; }
+
+    /* Cards */
+    .card {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    /* Status badges */
+    #game-status-badge {
+      display: inline-block;
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    .badge-active   { background: #065f46; color: #10b981; }
+    .badge-inactive { background: #1c1c1c; color: #666; }
+
+    /* Buttons */
+    .btn { padding: 9px 18px; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: bold; margin: 4px; }
+    .btn-green  { background: #065f46; color: #10b981; }
+    .btn-green:hover  { background: #047857; }
+    .btn-red    { background: #7f1d1d; color: #fca5a5; }
+    .btn-red:hover    { background: #991b1b; }
+    .btn-blue   { background: #1e3a8a; color: #93c5fd; }
+    .btn-blue:hover   { background: #1e40af; }
+    .btn-yellow { background: #78350f; color: #fbbf24; }
+    .btn-yellow:hover { background: #92400e; }
+    .btn-purple { background: #4c1d95; color: #c4b5fd; }
+    .btn-purple:hover { background: #5b21b6; }
+
+    /* Form elements */
+    input, select, textarea {
+      background: #111;
+      border: 1px solid #333;
+      color: #e5e5e5;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      width: 100%;
+      margin-bottom: 8px;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #3b82f6; }
+    label { font-size: 0.8rem; color: #aaa; display: block; margin-bottom: 2px; }
+
+    /* Grid layouts */
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .row-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
+    @media (max-width: 600px) { .row-2,.row-3,.row-4 { grid-template-columns: 1fr; } }
+
+    /* Game info bar */
+    #game-info { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 10px; }
+    .info-item { text-align: center; }
+    .info-label { font-size: 0.7rem; color: #888; text-transform: uppercase; }
+    .info-value { font-size: 1.3rem; font-weight: bold; color: #fbbf24; }
+
+    /* Lifeline buttons */
+    #lifeline-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* Question table */
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th { text-align: left; padding: 8px; border-bottom: 2px solid #333; color: #93c5fd; }
+    td { padding: 8px; border-bottom: 1px solid #1a1a1a; vertical-align: top; }
+    tr:hover td { background: #1e1e1e; }
+    .q-text { max-width: 300px; word-break: break-word; }
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.75rem;
+    }
+    .tag-easy   { background: #065f46; color: #6ee7b7; }
+    .tag-medium { background: #78350f; color: #fcd34d; }
+    .tag-hard   { background: #7f1d1d; color: #fca5a5; }
+
+    /* Answer choice display */
+    .answer-correct { color: #10b981; font-weight: bold; }
+
+    /* Phase label */
+    #phase-display {
+      font-size: 1.1rem;
+      color: #fbbf24;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    /* Answer submit panel */
+    #answer-panel { display: flex; gap: 8px; flex-wrap: wrap; }
+    .ans-btn {
+      flex: 1;
+      min-width: 80px;
+      padding: 14px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      border: 2px solid #333;
+      border-radius: 8px;
+      background: #1a1a3e;
+      color: #fff;
+      cursor: pointer;
+    }
+    .ans-btn:hover { background: #2563eb; border-color: #3b82f6; }
+
+    /* Vote bars */
+    .vbar-wrap { display: flex; align-items: center; gap: 8px; margin: 3px 0; font-size: 0.8rem; }
+    .vbar-label { width: 20px; font-weight: bold; }
+    .vbar-track { flex: 1; background: #1e3a8a33; border-radius: 3px; height: 12px; overflow: hidden; }
+    .vbar-fill  { height: 100%; background: #3b82f6; border-radius: 3px; transition: width 0.4s; }
+    .vbar-num   { width: 30px; text-align: right; color: #aaa; }
+
+    /* Timer */
+    #admin-timer { font-size: 2.5rem; font-weight: bold; color: #ffd700; text-align: center; }
+
+    #log { height: 120px; overflow-y: auto; font-size: 0.78rem; background: #0a0a0a; border-radius: 6px; padding: 8px; border: 1px solid #1a1a1a; }
+    .log-line { padding: 1px 0; border-bottom: 1px solid #111; }
+    .log-line.err { color: #f87171; }
+    .log-line.ok  { color: #4ade80; }
+  </style>
+</head>
+<body>
+  <h1>🎮 Hallintapaneeli</h1>
+  <p class="subtitle">Miljonaaripeli — Isännän näkymä</p>
+
+  <nav>
+    <a href="/">Pelaajan näkymä</a>
+    <a href="/leaderboard">Tulostaulukko</a>
+  </nav>
+
+  <!-- ===== GAME CONTROL ===== -->
+  <div class="card">
+    <h2>Pelinhallinta</h2>
+    <div id="game-status-badge" class="badge-inactive">⬛ Peli ei aktiivinen</div>
+
+    <div id="game-info">
+      <div class="info-item"><div class="info-label">Kysymys</div><div class="info-value" id="q-num">—</div></div>
+      <div class="info-item"><div class="info-label">Pelaajia</div><div class="info-value" id="player-cnt">0</div></div>
+      <div class="info-item"><div class="info-label">Vaihde</div><div id="phase-display">—</div></div>
+    </div>
+
+    <div id="admin-timer">—</div>
+
+    <!-- Start game form -->
+    <div id="start-form">
+      <div class="row-3">
+        <div>
+          <label>Pelimuoto</label>
+          <select id="mode-select">
+            <option value="trivia">Tietokilpailu</option>
+            <option value="chat_quotes">Chat-sitaatit</option>
+          </select>
+        </div>
+        <div>
+          <label>Kysymysten määrä</label>
+          <input type="number" id="q-count" value="10" min="1" max="50" />
+        </div>
+        <div>
+          <label>Äänestysaika (s)</label>
+          <input type="number" id="voting-time" value="30" min="10" max="120" />
+        </div>
+      </div>
+      <div class="row-2">
+        <div>
+          <label>Isännän aika (s)</label>
+          <input type="number" id="host-time" value="30" min="10" max="120" />
+        </div>
+        <div>
+          <label>Kanava (valinnainen)</label>
+          <input type="text" id="channel-input" placeholder="esim. minunkanava" />
+        </div>
+      </div>
+      <button class="btn btn-green" onclick="startGame()">▶ Aloita peli</button>
+    </div>
+
+    <div id="game-controls" style="display:none">
+      <button class="btn btn-red"    onclick="stopGame()">⏹ Lopeta peli</button>
+      <button class="btn btn-blue"   onclick="nextQuestion()">⏭ Seuraava kysymys</button>
+    </div>
+
+    <!-- Answer submission -->
+    <div id="answer-section" style="display:none;margin-top:12px">
+      <p style="color:#aaa;font-size:0.85rem;margin-bottom:6px">Valitse oikea vastaus:</p>
+      <div id="answer-panel">
+        <button class="ans-btn" onclick="submitAnswer('A')">A</button>
+        <button class="ans-btn" onclick="submitAnswer('B')">B</button>
+        <button class="ans-btn" onclick="submitAnswer('C')">C</button>
+        <button class="ans-btn" onclick="submitAnswer('D')">D</button>
+      </div>
+    </div>
+
+    <!-- Live votes -->
+    <div id="live-votes" style="margin-top:12px;display:none">
+      <p style="color:#aaa;font-size:0.8rem;margin-bottom:4px">Äänet:</p>
+      <div class="vbar-wrap"><span class="vbar-label">A</span><div class="vbar-track"><div class="vbar-fill" id="avbar-A"></div></div><span class="vbar-num" id="avcnt-A">0</span></div>
+      <div class="vbar-wrap"><span class="vbar-label">B</span><div class="vbar-track"><div class="vbar-fill" id="avbar-B"></div></div><span class="vbar-num" id="avcnt-B">0</span></div>
+      <div class="vbar-wrap"><span class="vbar-label">C</span><div class="vbar-track"><div class="vbar-fill" id="avbar-C"></div></div><span class="vbar-num" id="avcnt-C">0</span></div>
+      <div class="vbar-wrap"><span class="vbar-label">D</span><div class="vbar-track"><div class="vbar-fill" id="avbar-D"></div></div><span class="vbar-num" id="avcnt-D">0</span></div>
+    </div>
+
+    <!-- Lifelines -->
+    <div style="margin-top:14px;display:none" id="lifeline-section">
+      <p style="color:#aaa;font-size:0.8rem;margin-bottom:6px">Aputoiminnot:</p>
+      <div id="lifeline-row">
+        <button class="btn btn-red"    id="ll-removeWrong"  onclick="useLifeline('removeWrong')">❌ Poista väärät</button>
+        <button class="btn btn-yellow" id="ll-addTime"      onclick="useLifeline('addTime')">⏱️ +30 sekuntia</button>
+        <button class="btn btn-blue"   id="ll-extraHint"    onclick="useLifeline('extraHint')">💡 Vihje</button>
+        <button class="btn btn-purple" id="ll-askAudience"  onclick="useLifeline('askAudience')">🗳️ Kysy yleisöltä</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CHAT INTEGRATION ===== -->
+  <div class="card">
+    <h2>Chat-integraatio</h2>
+    <div class="row-2">
+      <div>
+        <label>Twitch-kanava</label>
+        <div style="display:flex;gap:6px">
+          <input type="text" id="twitch-channel" placeholder="käyttäjänimi" style="margin:0" />
+          <button class="btn btn-purple" onclick="connectChat('twitch')" style="white-space:nowrap">Yhdistä Twitch</button>
+        </div>
+      </div>
+      <div>
+        <label>Kick-kanava tai chatroom ID</label>
+        <div style="display:flex;gap:6px">
+          <input type="text" id="kick-channel" placeholder="esim. samppapappa tai 123456" style="margin:0" />
+          <button class="btn btn-green" onclick="connectChat('kick')" style="white-space:nowrap">Yhdistä Kick</button>
+        </div>
+      </div>
+    </div>
+    <p id="chat-status" style="color:#666;font-size:0.8rem;margin-top:6px">Ei yhdistetty</p>
+  </div>
+
+  <!-- ===== QUESTION MANAGEMENT ===== -->
+  <div class="card">
+    <h2>Kysymyshallinta</h2>
+    <div id="q-form" style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid #222">
+      <h2 style="margin-top:0" id="q-form-title">Lisää kysymys</h2>
+      <input type="hidden" id="edit-id" />
+      <label>Kysymys (suomeksi)</label>
+      <textarea id="qf-question" rows="2"></textarea>
+      <div class="row-4">
+        <div><label>Vaihtoehto A</label><input type="text" id="qf-a" /></div>
+        <div><label>Vaihtoehto B</label><input type="text" id="qf-b" /></div>
+        <div><label>Vaihtoehto C</label><input type="text" id="qf-c" /></div>
+        <div><label>Vaihtoehto D</label><input type="text" id="qf-d" /></div>
+      </div>
+      <div class="row-4">
+        <div>
+          <label>Oikea vastaus</label>
+          <select id="qf-correct">
+            <option>A</option><option>B</option><option>C</option><option>D</option>
+          </select>
+        </div>
+        <div>
+          <label>Vaikeustaso</label>
+          <select id="qf-difficulty">
+            <option value="easy">Helppo</option>
+            <option value="medium" selected>Keskivaikea</option>
+            <option value="hard">Vaikea</option>
+          </select>
+        </div>
+        <div>
+          <label>Kategoria</label>
+          <input type="text" id="qf-category" placeholder="esim. Historia" />
+        </div>
+        <div>
+          <label>Pelimuoto</label>
+          <select id="qf-mode">
+            <option value="trivia">Tietokilpailu</option>
+            <option value="chat_quotes">Chat-sitaatit</option>
+          </select>
+        </div>
+      </div>
+      <label>Vihje (valinnainen)</label>
+      <input type="text" id="qf-hint" placeholder="Vihje isännälle..." />
+      <button class="btn btn-green" onclick="saveQuestion()">💾 Tallenna</button>
+      <button class="btn btn-blue"  onclick="resetForm()">✕ Peruuta</button>
+    </div>
+
+    <!-- Filter -->
+    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap">
+      <select id="filter-mode" onchange="loadQuestions()" style="width:auto">
+        <option value="">Kaikki muodot</option>
+        <option value="trivia">Tietokilpailu</option>
+        <option value="chat_quotes">Chat-sitaatit</option>
+      </select>
+      <select id="filter-diff" onchange="loadQuestions()" style="width:auto">
+        <option value="">Kaikki tasot</option>
+        <option value="easy">Helppo</option>
+        <option value="medium">Keskivaikea</option>
+        <option value="hard">Vaikea</option>
+      </select>
+      <span id="q-count-label" style="color:#666;font-size:0.8rem;margin-left:auto"></span>
+    </div>
+
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Kysymys</th>
+            <th>Oikea</th>
+            <th>Taso</th>
+            <th>Kategoria</th>
+            <th>Toiminnot</th>
+          </tr>
+        </thead>
+        <tbody id="q-table-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== LOG ===== -->
+  <div class="card">
+    <h2>Tapahtumaloki</h2>
+    <div id="log"></div>
+  </div>
+
+  <script>
+    // -----------------------------------------------------------------------
+    // WebSocket
+    // -----------------------------------------------------------------------
+    let ws = null;
+    let gameActive = false;
+    let gamePhase  = 'waiting';
+    let maxTime    = 30;
+
+    function connect() {
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      ws = new WebSocket(`${proto}://${location.host}/ws`);
+      ws.addEventListener('open',    () => { log('WS yhdistetty', 'ok'); setInterval(() => ws.readyState===1&&ws.send(JSON.stringify({type:'ping'})), 25000); });
+      ws.addEventListener('message', (ev) => { let m; try{m=JSON.parse(ev.data);}catch{return;} handleMsg(m); });
+      ws.addEventListener('close',   () => { log('WS katkaistu, yhdistää...','err'); setTimeout(connect, 3000); });
+    }
+
+    function handleMsg(m) {
+      switch (m.type) {
+        case 'game_state':      onGameState(m.state); break;
+        case 'vote_update':     onVoteUpdate(m); break;
+        case 'answer_reveal':   onReveal(m); break;
+        case 'timer':           onTimer(m.timeLeft); break;
+        case 'lifeline_result': onLifeline(m); break;
+        case 'game_over':       onGameOver(m); break;
+        case 'chat_connect_ack': document.getElementById('chat-status').textContent = `✅ Yhdistetty: ${m.platform} / ${m.channel}`; break;
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // Game state
+    // -----------------------------------------------------------------------
+    function onGameState(state) {
+      gameActive = state.active;
+      gamePhase  = state.phase;
+
+      document.getElementById('game-status-badge').className   = gameActive ? 'badge-active' : 'badge-inactive';
+      document.getElementById('game-status-badge').textContent  = gameActive ? '🟢 Peli aktiivinen' : '⬛ Peli ei aktiivinen';
+      document.getElementById('q-num').textContent      = state.active ? `${state.questionNumber}/${state.totalQuestions}` : '—';
+      document.getElementById('player-cnt').textContent = state.connectedPlayers || 0;
+      document.getElementById('phase-display').textContent = phaseLabel(state.phase);
+
+      document.getElementById('start-form').style.display    = gameActive ? 'none' : 'block';
+      document.getElementById('game-controls').style.display = gameActive ? 'block' : 'none';
+      document.getElementById('live-votes').style.display    = gameActive ? 'block' : 'none';
+      document.getElementById('lifeline-section').style.display = gameActive ? 'block' : 'none';
+
+      const showAnswer = gameActive && ['voting','host_turn'].includes(state.phase);
+      document.getElementById('answer-section').style.display = showAnswer ? 'block' : 'none';
+
+      if (state.lifelines) updateLifelineBtns(state.lifelines);
+      if (state.votes)     updateAdminVoteBars(state.votes);
+      if (state.timeLeft !== undefined) onTimer(state.timeLeft);
+
+      if (state.active) maxTime = state.phase === 'voting' ? state.votingTimeSeconds : state.hostTimeSeconds;
+    }
+
+    function onVoteUpdate(m) {
+      updateAdminVoteBars(m.votes);
+    }
+
+    function onReveal(m) {
+      log(`Oikea vastaus: ${m.correct}`, 'ok');
+      document.getElementById('answer-section').style.display = 'none';
+    }
+
+    function onTimer(t) {
+      document.getElementById('admin-timer').textContent = t > 0 ? t + 's' : '—';
+      document.getElementById('admin-timer').style.color = t <= 5 ? '#ef4444' : '#ffd700';
+    }
+
+    function onLifeline(m) {
+      log(`Aputoiminto käytetty: ${m.lifeline}`);
+      if (m.lifeline === 'extraHint') alert('💡 Vihje lähetetty: ' + m.data?.hint);
+      if (m.lifeline === 'askAudience') {
+        const d = m.data?.distribution;
+        log(`Yleisövastaukset: A:${d?.A}% B:${d?.B}% C:${d?.C}% D:${d?.D}%`);
+      }
+    }
+
+    function onGameOver(m) {
+      log('Peli päättyi!', 'ok');
+      loadQuestions(); // Refresh in case admin wants to add more
+    }
+
+    // -----------------------------------------------------------------------
+    // Admin API calls
+    // -----------------------------------------------------------------------
+    async function api(method, path, body) {
+      const opts = { method, headers: { 'Content-Type': 'application/json' } };
+      if (body) opts.body = JSON.stringify(body);
+      const r = await fetch(path, opts);
+      return r.json();
+    }
+
+    async function startGame() {
+      const data = await api('POST', '/api/game/start', {
+        mode:               document.getElementById('mode-select').value,
+        questionCount:      parseInt(document.getElementById('q-count').value),
+        votingTimeSeconds:  parseInt(document.getElementById('voting-time').value),
+        hostTimeSeconds:    parseInt(document.getElementById('host-time').value),
+        channel:            document.getElementById('channel-input').value.trim() || null,
+      });
+      if (data.success) log(`Peli aloitettu — ${data.totalQuestions} kysymystä`, 'ok');
+      else log('Virhe: ' + data.error, 'err');
+    }
+
+    async function stopGame() {
+      if (!confirm('Lopeta peli?')) return;
+      const data = await api('POST', '/api/game/stop');
+      if (data.success) log('Peli lopetettu', 'ok');
+    }
+
+    async function nextQuestion() {
+      await api('POST', '/api/game/next-question');
+      log('Siirrytty seuraavaan kysymykseen');
+    }
+
+    async function submitAnswer(letter) {
+      const data = await api('POST', '/api/game/answer', { answer: letter });
+      if (data.success) log(`Vastaus lähetetty: ${letter}`, 'ok');
+      else log('Virhe: ' + data.error, 'err');
+    }
+
+    async function useLifeline(name) {
+      const data = await api('POST', '/api/game/use-lifeline', { lifeline: name });
+      if (data.success) { log(`Aputoiminto: ${name}`, 'ok'); updateLifelineBtns(data.lifelines); }
+      else log('Virhe: ' + data.error, 'err');
+    }
+
+    // -----------------------------------------------------------------------
+    // Chat connect
+    // -----------------------------------------------------------------------
+    function connectChat(platform) {
+      if (!ws || ws.readyState !== 1) { log('WS ei yhdistetty', 'err'); return; }
+      const channel = platform === 'twitch'
+        ? document.getElementById('twitch-channel').value.trim()
+        : document.getElementById('kick-channel').value.trim();
+      if (!channel) { alert('Anna kanavan nimi/ID'); return; }
+      ws.send(JSON.stringify({ type: 'chat_connect', platform, channel, chatroomId: channel }));
+      log(`Yhdistetään ${platform} chattiin: ${channel}`);
+    }
+
+    // -----------------------------------------------------------------------
+    // Question management
+    // -----------------------------------------------------------------------
+    async function loadQuestions() {
+      const mode = document.getElementById('filter-mode').value;
+      const diff = document.getElementById('filter-diff').value;
+      let url = '/api/questions?';
+      if (mode) url += `mode=${mode}&`;
+      if (diff) url += `difficulty=${diff}&`;
+
+      const data = await api('GET', url);
+      if (!data.success) { log('Virhe ladattaessa kysymyksiä', 'err'); return; }
+
+      document.getElementById('q-count-label').textContent = `${data.data.length} kysymystä`;
+      const tbody = document.getElementById('q-table-body');
+      tbody.innerHTML = data.data.map(q => `
+        <tr>
+          <td>${q.id}</td>
+          <td class="q-text">${esc(q.question_fi)}</td>
+          <td class="answer-correct">${q.correct_answer}</td>
+          <td><span class="tag tag-${q.difficulty}">${diffLabel(q.difficulty)}</span></td>
+          <td>${esc(q.category)}</td>
+          <td>
+            <button class="btn btn-blue" onclick='editQuestion(${JSON.stringify(q)})' style="padding:4px 10px;font-size:0.8rem">✏️</button>
+            <button class="btn btn-red"  onclick="deleteQuestion(${q.id})" style="padding:4px 10px;font-size:0.8rem">🗑</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function editQuestion(q) {
+      document.getElementById('q-form-title').textContent = 'Muokkaa kysymystä #' + q.id;
+      document.getElementById('edit-id').value        = q.id;
+      document.getElementById('qf-question').value    = q.question_fi;
+      document.getElementById('qf-a').value           = q.option_a;
+      document.getElementById('qf-b').value           = q.option_b;
+      document.getElementById('qf-c').value           = q.option_c;
+      document.getElementById('qf-d').value           = q.option_d;
+      document.getElementById('qf-correct').value     = q.correct_answer;
+      document.getElementById('qf-difficulty').value  = q.difficulty;
+      document.getElementById('qf-category').value    = q.category;
+      document.getElementById('qf-mode').value        = q.mode;
+      document.getElementById('qf-hint').value        = q.hint || '';
+      document.getElementById('q-form').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function resetForm() {
+      document.getElementById('q-form-title').textContent = 'Lisää kysymys';
+      document.getElementById('edit-id').value = '';
+      ['qf-question','qf-a','qf-b','qf-c','qf-d','qf-hint'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('qf-correct').value    = 'A';
+      document.getElementById('qf-difficulty').value = 'medium';
+      document.getElementById('qf-category').value   = '';
+      document.getElementById('qf-mode').value       = 'trivia';
+    }
+
+    async function saveQuestion() {
+      const id = document.getElementById('edit-id').value;
+      const payload = {
+        question_fi:    document.getElementById('qf-question').value.trim(),
+        option_a:       document.getElementById('qf-a').value.trim(),
+        option_b:       document.getElementById('qf-b').value.trim(),
+        option_c:       document.getElementById('qf-c').value.trim(),
+        option_d:       document.getElementById('qf-d').value.trim(),
+        correct_answer: document.getElementById('qf-correct').value,
+        difficulty:     document.getElementById('qf-difficulty').value,
+        category:       document.getElementById('qf-category').value.trim(),
+        hint:           document.getElementById('qf-hint').value.trim() || null,
+        mode:           document.getElementById('qf-mode').value,
+      };
+
+      if (!payload.question_fi || !payload.option_a || !payload.option_b || !payload.option_c || !payload.option_d) {
+        alert('Täytä kaikki kentät.'); return;
+      }
+
+      let data;
+      if (id) {
+        data = await api('PUT', `/api/questions/${id}`, payload);
+        if (data.success) { log(`Kysymys #${id} päivitetty`, 'ok'); resetForm(); }
+      } else {
+        data = await api('POST', '/api/questions', payload);
+        if (data.success) { log(`Uusi kysymys lisätty (#${data.id})`, 'ok'); resetForm(); }
+      }
+      if (!data.success) log('Virhe: ' + data.error, 'err');
+      loadQuestions();
+    }
+
+    async function deleteQuestion(id) {
+      if (!confirm(`Poista kysymys #${id}?`)) return;
+      const data = await api('DELETE', `/api/questions/${id}`);
+      if (data.success) { log(`Kysymys #${id} poistettu`, 'ok'); loadQuestions(); }
+      else log('Virhe: ' + data.error, 'err');
+    }
+
+    // -----------------------------------------------------------------------
+    // Helpers
+    // -----------------------------------------------------------------------
+    function updateAdminVoteBars(votes) {
+      const total = Math.max(1, Object.values(votes).reduce((a,b)=>a+b,0));
+      for (const l of ['A','B','C','D']) {
+        const pct = Math.round((votes[l]||0)/total*100);
+        document.getElementById('avbar-'+l).style.width = pct+'%';
+        document.getElementById('avcnt-'+l).textContent = votes[l]||0;
+      }
+    }
+
+    function updateLifelineBtns(ll) {
+      const ids = { removeWrong:'ll-removeWrong', addTime:'ll-addTime', extraHint:'ll-extraHint', askAudience:'ll-askAudience' };
+      for (const [k,id] of Object.entries(ids)) {
+        const btn = document.getElementById(id);
+        if (!btn) continue;
+        const used = ll[k]?.used >= ll[k]?.total;
+        btn.disabled = used || !gameActive;
+        btn.style.opacity = used ? '0.35' : '1';
+      }
+    }
+
+    function phaseLabel(p) {
+      return { waiting:'⏳ Odotus', voting:'🗳️ Äänestys', host_turn:'🎤 Isäntä', revealing:'✅ Paljastus', game_over:'🏁 Ohi' }[p] || p;
+    }
+    function diffLabel(d) {
+      return { easy:'Helppo', medium:'Keski', hard:'Vaikea' }[d] || d;
+    }
+    function esc(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function log(msg, type='') {
+      const div = document.getElementById('log');
+      const line = document.createElement('div');
+      line.className = 'log-line ' + type;
+      line.textContent = new Date().toLocaleTimeString('fi') + ' — ' + msg;
+      div.prepend(line);
+      while (div.children.length > 200) div.removeChild(div.lastChild);
+    }
+
+    // -----------------------------------------------------------------------
+    // Init
+    // -----------------------------------------------------------------------
+    connect();
+    loadQuestions();
+  </script>
+</body>
+</html>

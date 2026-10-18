@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tulostaulukko – Kuka haluaa miljonääriksi?</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="lb-body">
+
+  <!-- Stage background -->
+  <div class="stage-bg" aria-hidden="true">
+    <div class="beam beam-1"></div>
+    <div class="beam beam-2"></div>
+    <div class="beam beam-4"></div>
+    <div class="beam beam-6"></div>
+  </div>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-title">
+      <span class="header-star">★</span>
+      <span>Miljonääri</span>
+    </div>
+    <nav class="header-nav">
+      <a class="nav-link" href="index.html">← Peliin</a>
+    </nav>
+  </header>
+
+  <main class="lb-main">
+    <h1 class="lb-page-title">Tulostaulukko</h1>
+
+    <!-- Filter tabs -->
+    <div class="lb-tabs" role="tablist">
+      <button class="lb-tab active" data-period="all" role="tab" aria-selected="true">Kaikki ajat</button>
+      <button class="lb-tab" data-period="week" role="tab" aria-selected="false">Tämä viikko</button>
+      <button class="lb-tab" data-period="month" role="tab" aria-selected="false">Tämä kuukausi</button>
+    </div>
+
+    <!-- Auto-refresh indicator -->
+    <div class="lb-refresh-indicator">
+      <span class="refresh-dot"></span>
+      <span id="refresh-countdown">Päivitetään 30 s:n välein</span>
+    </div>
+
+    <!-- Loading state -->
+    <div class="lb-loading hidden" id="lb-loading">
+      <div class="waiting-spinner"></div>
+      <p>Ladataan tuloksia...</p>
+    </div>
+
+    <!-- Error state -->
+    <div class="lb-error hidden" id="lb-error">
+      <p>⚠️ Tulostaulukko ei saatavilla (palvelin ei ole käynnissä)</p>
+      <p class="lb-error-sub">Tiedot ladataan kun pelipalvelin käynnistetään.</p>
+    </div>
+
+    <!-- TOP 3 PODIUM -->
+    <div class="lb-podium" id="lb-podium">
+      <!-- Podium slots inserted by JS: 2nd (silver), 1st (gold), 3rd (bronze) -->
+    </div>
+
+    <!-- FULL TABLE -->
+    <div class="lb-table-wrapper">
+      <table class="lb-table" id="lb-table">
+        <thead>
+          <tr>
+            <th class="th-rank">#</th>
+            <th class="th-player">Pelaaja</th>
+            <th class="th-platform">Alusta</th>
+            <th class="th-score">Pisteet</th>
+            <th class="th-games">Pelejä</th>
+            <th class="th-accuracy">Tarkkuus</th>
+          </tr>
+        </thead>
+        <tbody id="lb-tbody">
+          <!-- Rows inserted by leaderboard.js -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty state -->
+    <div class="lb-empty hidden" id="lb-empty">
+      <div class="empty-icon" aria-hidden="true">🏆</div>
+      <p>Tulostaulukko on tyhjä. Pelaa ensimmäinen peli!</p>
+      <a class="btn btn-primary" href="index.html">Aloita peli</a>
+    </div>
+
+  </main>
+
+  <script src="js/leaderboard.js"></script>
+</body>
+</html>

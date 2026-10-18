@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kuka haluaa miljonääriksi? — Live Kick & Twitch Trivia</title>
+  <meta name="description" content="Kuka haluaa miljonääriksi -tyylinen suomalainen triviapeli Kick- ja Twitch-chatin reaaliaikaisella äänestyksellä." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Rubik:wght@400;500;600;700;800&family=DotGothic16&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    /* TV Game Show specific enhancements */
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 24px;
+      background: rgba(10, 14, 26, 0.85);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 215, 0, 0.15);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .sound-ctrl {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .top-btn {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+    .top-btn:hover {
+      background: rgba(245, 197, 24, 0.2);
+      border-color: #ffd700;
+      color: #ffd700;
+      text-decoration: none;
+    }
+    .top-btn-twitch {
+      background: #9146ff;
+      border-color: #9146ff;
+    }
+    .top-btn-twitch:hover {
+      background: #772ce8;
+      border-color: #772ce8;
+      color: #fff;
+    }
+    .icon-btn {
+      padding: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .volume {
+      accent-color: #ffd700;
+      cursor: pointer;
+      width: 80px;
+    }
+    .hidden { display: none !important; }
+
+    /* Studio Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 1200px;
+      margin: 16px auto;
+      padding: 0 20px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .header-title .logo {
+      font-family: 'Anton', sans-serif;
+      font-size: 2.4rem;
+      letter-spacing: 2px;
+      color: #ffd700;
+      text-shadow: 0 0 25px rgba(255, 215, 0, 0.45);
+      margin: 0;
+      line-height: 1.1;
+    }
+    .header-title .subtitle {
+      color: #9ca3af;
+      font-size: 0.9rem;
+      margin-top: 4px;
+    }
+    .led-panels {
+      display: flex;
+      gap: 12px;
+    }
+    .led-panel {
+      background: #000;
+      border: 2px solid #222;
+      border-radius: 8px;
+      padding: 6px 14px;
+      text-align: center;
+      min-width: 85px;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+    }
+    .led-panel-wide { min-width: 120px; }
+    .led-label {
+      display: block;
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #888;
+      margin-bottom: 2px;
+    }
+    .led {
+      font-family: 'DotGothic16', monospace;
+      font-size: 1.35rem;
+      font-weight: bold;
+    }
+    .led-gold { color: #ffd700; text-shadow: 0 0 8px rgba(255, 215, 0, 0.7); }
+    .led-violet { color: #c084fc; text-shadow: 0 0 8px rgba(192, 132, 252, 0.7); }
+
+    /* Main Studio Stage */
+    .studio-layout {
+      max-width: 1200px;
+      margin: 0 auto 40px auto;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 24px;
+      align-items: start;
+    }
+    @media (max-width: 900px) {
+      .studio-layout { grid-template-columns: 1fr; }
+      .ladder-panel { display: none; }
+    }
+
+    /* Game Stage Box */
+    .stage-card {
+      background: radial-gradient(circle at 50% 30%, #151d38 0%, #0d1224 100%);
+      border: 2px solid rgba(245, 197, 24, 0.35);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(245, 197, 24, 0.1);
+      position: relative;
+    }
+
+    /* Join / Login Banner */
+    .join-bar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .join-bar input {
+      background: #090d18;
+      border: 1px solid #3b82f6;
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 6px;
+      flex: 1;
+      min-width: 140px;
+    }
+    .join-bar select {
+      background: #090d18;
+      border: 1px solid #3b82f6;
+      color: #fff;
+      padding: 8px 10px;
+      border-radius: 6px;
+    }
+
+    /* Phase Indicator */
+    .phase-badge {
+      display: inline-block;
+      padding: 5px 16px;
+      background: rgba(245, 197, 24, 0.12);
+      border: 1px solid #ffd700;
+      color: #ffd700;
+      border-radius: 20px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 12px;
+      box-shadow: 0 0 12px rgba(255, 215, 0, 0.2);
+    }
+
+    /* Question Box */
+    .question-screen {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .question-category {
+      font-size: 0.85rem;
+      color: #93c5fd;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .question-heading {
+      font-size: 1.5rem;
+      font-weight: 700;
+      line-height: 1.35;
+      color: #fff;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 16px;
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* Answer Options Grid (Classic TV layout) */
+    .answers-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin: 20px 0;
+    }
+    @media (max-width: 600px) {
+      .answers-grid { grid-template-columns: 1fr; }
+    }
+    .diamond-btn {
+      background: linear-gradient(135deg, #111a36 0%, #0b1024 100%);
+      border: 2px solid #2d3e75;
+      border-radius: 12px;
+      color: #fff;
+      padding: 16px 20px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      text-align: left;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    }
+    .diamond-btn .letter-badge {
+      font-family: 'Anton', sans-serif;
+      font-size: 1.25rem;
+      color: #ffd700;
+      width: 28px;
+      flex-shrink: 0;
+    }
+    .diamond-btn:hover:not(:disabled) {
+      border-color: #ffd700;
+      background: linear-gradient(135deg, #1c2a57 0%, #121c3d 100%);
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+      transform: translateY(-2px);
+    }
+    .diamond-btn.voted {
+      background: linear-gradient(135deg, #4c1d95 0%, #2e1065 100%) !important;
+      border-color: #c084fc !important;
+      box-shadow: 0 0 20px rgba(192, 132, 252, 0.4);
+    }
+    .diamond-btn.correct {
+      background: linear-gradient(135deg, #065f46 0%, #064e3b 100%) !important;
+      border-color: #10b981 !important;
+      box-shadow: 0 0 25px rgba(16, 185, 129, 0.6) !important;
+      animation: pulse-correct 1s infinite alternate;
+    }
+    .diamond-btn.wrong {
+      background: linear-gradient(135deg, #7f1d1d 0%, #450a0a 100%) !important;
+      border-color: #ef4444 !important;
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.5) !important;
+    }
+    .diamond-btn.eliminated {
+      opacity: 0.22;
+      filter: grayscale(1);
+      cursor: not-allowed;
+      border-color: #222;
+    }
+    .diamond-btn:disabled { cursor: not-allowed; }
+
+    @keyframes pulse-correct {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.02); }
+    }
+
+    /* Circular / Linear Countdown Timer */
+    .timer-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .timer-bar-outer {
+      flex: 1;
+      height: 10px;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 5px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .timer-bar-inner {
+      height: 100%;
+      background: linear-gradient(90deg, #ffd700, #f59e0b);
+      width: 100%;
+      transition: width 0.9s linear, background 0.3s;
+      border-radius: 5px;
+    }
+    .timer-num {
+      font-family: 'Anton', sans-serif;
+      font-size: 1.35rem;
+      color: #ffd700;
+      min-width: 44px;
+      text-align: right;
+    }
+
+    /* Lifeline Badges Bar */
+    .lifelines-container {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+    .ll-pill {
+      background: rgba(17, 26, 54, 0.9);
+      border: 1px solid rgba(255, 215, 0, 0.3);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .ll-pill.used {
+      opacity: 0.35;
+      text-decoration: line-through;
+      border-color: #444;
+    }
+
+    /* Audience Vote Bars */
+    .vote-stats {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-top: 18px;
+    }
+    .vote-stats-title {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #9ca3af;
+      margin-bottom: 8px;
+    }
+    .vote-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .vote-bar-col {
+      text-align: center;
+    }
+    .vote-bar-track {
+      height: 50px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      display: flex;
+      align-items: flex-end;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+    .vote-bar-fill {
+      width: 100%;
+      background: linear-gradient(to top, #2563eb, #60a5fa);
+      transition: height 0.3s ease;
+      height: 0%;
+    }
+    .vote-col-label {
+      font-weight: bold;
+      font-size: 0.85rem;
+      color: #ffd700;
+    }
+    .vote-col-pct {
+      font-size: 0.75rem;
+      color: #d1d5db;
+    }
+
+    /* Money Ladder Panel */
+    .ladder-panel {
+      background: rgba(13, 18, 36, 0.85);
+      border: 1px solid rgba(255, 215, 0, 0.25);
+      border-radius: 16px;
+      padding: 16px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .ladder-title {
+      font-family: 'Anton', sans-serif;
+      font-size: 1.15rem;
+      letter-spacing: 1px;
+      color: #ffd700;
+      text-align: center;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 215, 0, 0.2);
+    }
+    .ladder-list {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .ladder-step {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #e5e7eb;
+    }
+    .ladder-step.milestone {
+      color: #ffd700;
+      font-weight: 800;
+      background: rgba(255, 215, 0, 0.08);
+    }
+    .ladder-step.top-prize {
+      color: #fff;
+      background: linear-gradient(90deg, rgba(255,215,0,0.3), rgba(245,158,11,0.3));
+      border: 1px solid #ffd700;
+      font-weight: 800;
+    }
+    .ladder-step.active {
+      background: #ffd700 !important;
+      color: #000 !important;
+      box-shadow: 0 0 12px rgba(255, 215, 0, 0.8);
+      transform: scale(1.03);
+    }
+
+    /* Live Chat & Mini Leaderboard */
+    .side-card {
+      margin-top: 18px;
+      background: rgba(13, 18, 36, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .side-card h3 {
+      font-size: 0.95rem;
+      color: #ffd700;
+      margin-bottom: 10px;
+    }
+    .chat-scroll {
+      height: 180px;
+      overflow-y: auto;
+      font-size: 0.82rem;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .chat-row {
+      padding: 3px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+    .chat-row.kick .c-user { color: #22c55e; }
+    .chat-row.twitch .c-user { color: #a855f7; }
+    .chat-row.guest .c-user { color: #60a5fa; }
+    .c-user { font-weight: 700; }
+  </style>
+</head>
+<body>
+
+  <!-- Dynamic stage lighting beams -->
+  <div class="stage-bg" aria-hidden="true">
+    <div class="beam beam-1"></div>
+    <div class="beam beam-2"></div>
+    <div class="beam beam-4"></div>
+    <div class="beam beam-6"></div>
+  </div>
+
+  <!-- Top Navigation & Controls -->
+  <nav class="topbar" aria-label="Päävalikko">
+    <div class="sound-ctrl">
+      <button type="button" class="top-btn icon-btn" id="btn-mute" aria-pressed="false" aria-label="Mykistä musiikki" title="Mykistä / Poista mykistys">
+        <svg class="icon-on" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>
+        <svg class="icon-off hidden" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="m23 9-6 6"/><path d="m17 9 6 6"/></svg>
+      </button>
+      <input type="range" class="volume" id="volume" min="0" max="100" step="1" value="40" aria-label="Musiikin voimakkuus" title="Musiikin voimakkuus" />
+    </div>
+
+    <div style="display:flex;gap:10px;align-items:center;">
+      <a href="/leaderboard" class="top-btn">🏆 Tulostaulukko</a>
+      <a href="/admin" class="top-btn" target="_blank">⚙️ Isäntä / Admin</a>
+      <a href="/auth/twitch" class="top-btn top-btn-twitch" id="btn-login">Kirjaudu Twitchillä</a>
+    </div>
+  </nav>
+
+  <!-- TV Studio Header -->
+  <header class="header">
+    <div class="header-title">
+      <h1 class="logo">KUKA HALUAA MILJONÄÄRIKSI?</h1>
+      <div class="subtitle" id="subtitle">Live Kick & Twitch Trivia — Kilpaile chatin kanssa!</div>
+    </div>
+    <div class="led-panels" id="led-panels">
+      <div class="led-panel">
+        <span class="led-label">Kysymys</span>
+        <span class="led led-gold" id="led-round">01/10</span>
+      </div>
+      <div class="led-panel" id="led-streak-panel">
+        <span class="led-label">Putki</span>
+        <span class="led led-gold" id="led-streak">x1</span>
+      </div>
+      <div class="led-panel led-panel-wide">
+        <span class="led-label">Pisteet</span>
+        <span class="led led-violet" id="led-score">00000</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Studio Stage Content Layout -->
+  <main class="studio-layout">
+    <div class="stage-left">
+      <!-- Player Join Bar -->
+      <div class="join-bar" id="join-bar">
+        <input id="username-input" type="text" placeholder="Kirjoita nimimerkkisi..." maxlength="30" />
+        <select id="platform-select">
+          <option value="guest">Vieras</option>
+          <option value="kick">Kick-käyttäjä</option>
+          <option value="twitch">Twitch-käyttäjä</option>
+        </select>
+        <button class="top-btn" style="background:#2563eb;border-color:#3b82f6;" onclick="joinGame()">🎮 Liity peliin</button>
+        <span id="player-indicator" style="font-size:0.85rem;color:#ffd700;font-weight:600;"></span>
+      </div>
+
+      <!-- Main Quiz Stage Card -->
+      <div class="stage-card">
+        <!-- Waiting Room View -->
+        <div id="waiting-screen" style="text-align:center;padding:50px 20px;">
+          <div style="font-size:3rem;margin-bottom:12px;">⏳</div>
+          <h2 style="font-family:'Anton',sans-serif;font-size:2rem;color:#ffd700;letter-spacing:1px;margin-bottom:10px;">ODOTETAAN PELIN ALKUA</h2>
+          <p style="color:#9ca3af;font-size:1.05rem;max-width:500px;margin:0 auto 20px auto;">
+            Isäntä aloittaa uuden kierroksen pian. Liity peliin nimimerkilläsi tai osallistu suoraan Kick/Twitch-chatissa kirjoittamalla A, B, C tai D!
+          </p>
+          <div id="status" style="color:#60a5fa;font-weight:600;">Yhdistetään palvelimeen...</div>
+        </div>
+
+        <!-- Active Question Box View -->
+        <div id="question-box" style="display:none;">
+          <!-- Phase Badge & Countdown -->
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div class="phase-badge" id="phase-label">CHATTILAISET ÄÄNESTÄVÄT</div>
+            <div id="host-hint-status" style="font-size:0.82rem;color:#9ca3af;"></div>
+          </div>
+
+          <!-- Timer Bar -->
+          <div class="timer-wrap">
+            <div class="timer-bar-outer">
+              <div class="timer-bar-inner" id="timer-bar"></div>
+            </div>
+            <div class="timer-num" id="timer-text">30s</div>
+          </div>
+
+          <!-- Lifelines Display -->
+          <div class="lifelines-container" id="lifeline-row">
+            <span class="ll-pill" id="pill-removeWrong">❌ 50:50 Poista väärät</span>
+            <span class="ll-pill" id="pill-addTime">⏱️ +30s Lisäaika</span>
+            <span class="ll-pill" id="pill-extraHint">💡 Lisävihje</span>
+            <span class="ll-pill" id="pill-askAudience">👥 Kysy yleisöltä</span>
+          </div>
+
+          <!-- Lifeline Effect Banner -->
+          <div id="lifeline-banner" style="display:none;padding:12px 16px;margin:0 0 16px 0;border-radius:10px;background:rgba(255,215,0,0.12);border:1.5px solid #ffd700;color:#ffd700;font-weight:600;text-align:center;font-size:1.05rem;animation:pulse-correct 1s infinite alternate;"></div>
+
+          <!-- Question Text Screen -->
+          <div class="question-screen">
+            <div class="question-category" id="question-meta">Yleistieto · Helppo</div>
+            <div class="question-heading" id="question-text">Ladataan kysymystä...</div>
+          </div>
+
+          <!-- Result Indicator -->
+          <div id="result-message" style="text-align:center;font-size:1.25rem;font-weight:bold;margin-bottom:14px;min-height:28px;"></div>
+
+          <!-- 4 Classic Diamond Buttons -->
+          <div class="answers-grid">
+            <button class="diamond-btn" id="opt-A" onclick="vote('A')">
+              <span class="letter-badge">A:</span>
+              <span class="opt-text" id="text-A">...</span>
+            </button>
+            <button class="diamond-btn" id="opt-B" onclick="vote('B')">
+              <span class="letter-badge">B:</span>
+              <span class="opt-text" id="text-B">...</span>
+            </button>
+            <button class="diamond-btn" id="opt-C" onclick="vote('C')">
+              <span class="letter-badge">C:</span>
+              <span class="opt-text" id="text-C">...</span>
+            </button>
+            <button class="diamond-btn" id="opt-D" onclick="vote('D')">
+              <span class="letter-badge">D:</span>
+              <span class="opt-text" id="text-D">...</span>
+            </button>
+          </div>
+
+          <!-- Live Audience Votes (Shown during Ask Audience or Voting) -->
+          <div class="vote-stats" id="vote-section">
+            <div class="vote-stats-title" id="vote-title">👥 Yleisön ja Chatin live-äänet</div>
+            <div class="vote-grid">
+              <div class="vote-bar-col">
+                <div class="vote-bar-track"><div class="vote-bar-fill" id="vbar-A"></div></div>
+                <div class="vote-col-label">A</div>
+                <div class="vote-col-pct" id="vcnt-A">0%</div>
+              </div>
+              <div class="vote-bar-col">
+                <div class="vote-bar-track"><div class="vote-bar-fill" id="vbar-B"></div></div>
+                <div class="vote-col-label">B</div>
+                <div class="vote-col-pct" id="vcnt-B">0%</div>
+              </div>
+              <div class="vote-bar-col">
+                <div class="vote-bar-track"><div class="vote-bar-fill" id="vbar-C"></div></div>
+                <div class="vote-col-label">C</div>
+                <div class="vote-col-pct" id="vcnt-C">0%</div>
+              </div>
+              <div class="vote-bar-col">
+                <div class="vote-bar-track"><div class="vote-bar-fill" id="vbar-D"></div></div>
+                <div class="vote-col-label">D</div>
+                <div class="vote-col-pct" id="vcnt-D">0%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Chat & Mini Leaderboard Row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;">
+        <!-- Live Chat Feed -->
+        <div class="side-card">
+          <h3>💬 Chat-syöte (Kick & Twitch)</h3>
+          <div class="chat-scroll" id="chat-panel">
+            <div style="color:#6b7280;font-style:italic;">Odotetaan chatti-viestejä...</div>
+          </div>
+        </div>
+
+        <!-- Session Leaderboard -->
+        <div class="side-card">
+          <h3>🏆 Tämän pelin kärki</h3>
+          <div class="chat-scroll" id="score-list">
+            <div style="color:#6b7280;font-style:italic;">Ei pelaajia vielä</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Money Ladder Sidebar (Who Wants to Be a Millionaire) -->
+    <aside class="ladder-panel">
+      <div class="ladder-title">💰 VOITTOTAULUKKO</div>
+      <div class="ladder-list" id="ladder-list">
+        <div class="ladder-step top-prize" data-q="15"><span>15</span> <span>1 000 000 €</span></div>
+        <div class="ladder-step" data-q="14"><span>14</span> <span>500 000 €</span></div>
+        <div class="ladder-step" data-q="13"><span>13</span> <span>250 000 €</span></div>
+        <div class="ladder-step" data-q="12"><span>12</span> <span>125 000 €</span></div>
+        <div class="ladder-step" data-q="11"><span>11</span> <span>64 000 €</span></div>
+        <div class="ladder-step milestone" data-q="10"><span>10</span> <span>32 000 € ♦</span></div>
+        <div class="ladder-step" data-q="9"><span>9</span> <span>16 000 €</span></div>
+        <div class="ladder-step" data-q="8"><span>8</span> <span>8 000 €</span></div>
+        <div class="ladder-step" data-q="7"><span>7</span> <span>4 000 €</span></div>
+        <div class="ladder-step" data-q="6"><span>6</span> <span>2 000 €</span></div>
+        <div class="ladder-step milestone" data-q="5"><span>5</span> <span>1 000 € ♦</span></div>
+        <div class="ladder-step" data-q="4"><span>4</span> <span>500 €</span></div>
+        <div class="ladder-step" data-q="3"><span>3</span> <span>300 €</span></div>
+        <div class="ladder-step" data-q="2"><span>2</span> <span>200 €</span></div>
+        <div class="ladder-step" data-q="1"><span>1</span> <span>100 €</span></div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Audio Controller Script -->
+  <script src="js/audio.js"></script>
+
+  <!-- Game Client Script -->
+  <script>
+    'use strict';
+
+    let ws = null;
+    let myUsername = null;
+    let myVote = null;
+    let maxTime = 30;
+    let gamePhase = 'waiting';
+    let userScore = 0;
+    let userStreak = 1;
+
+    // -------------------------------------------------------------------------
+    // Audio Controls Wiring
+    // -------------------------------------------------------------------------
+    const muteBtn = document.getElementById('btn-mute');
+    const volumeSlider = document.getElementById('volume');
+    const iconOn = muteBtn.querySelector('.icon-on');
+    const iconOff = muteBtn.querySelector('.icon-off');
+
+    muteBtn.addEventListener('click', () => {
+      const isMuted = window.audioManager.toggleMute();
+      iconOn.classList.toggle('hidden', isMuted);
+      iconOff.classList.toggle('hidden', !isMuted);
+    });
+
+    volumeSlider.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value) / 100;
+      window.audioManager.setVolume(val);
+      if (window.audioManager.isMuted) {
+        window.audioManager.toggleMute();
+        iconOn.classList.remove('hidden');
+        iconOff.classList.add('hidden');
+      }
+    });
+
+    // -------------------------------------------------------------------------
+    // WebSocket Connection
+    // -------------------------------------------------------------------------
+    function connect() {
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      ws = new WebSocket(`${proto}://${location.host}/ws`);
+
+      ws.addEventListener('open', () => {
+        document.getElementById('status').textContent = 'Yhdistetty palvelimeen ✓';
+        setInterval(() => ws.readyState === 1 && ws.send(JSON.stringify({ type: 'ping' })), 25000);
+        if (myUsername) sendJoin();
+      });
+
+      ws.addEventListener('message', (ev) => {
+        let msg;
+        try { msg = JSON.parse(ev.data); } catch { return; }
+        handleMessage(msg);
+      });
+
+      ws.addEventListener('close', () => {
+        document.getElementById('status').textContent = 'Yhteys katkesi. Yhdistetään uudelleen...';
+        setTimeout(connect, 3000);
+      });
+
+      ws.addEventListener('error', () => ws.close());
+    }
+
+    function send(obj) {
+      if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj));
+    }
+
+    // -------------------------------------------------------------------------
+    // Join Logic
+    // -------------------------------------------------------------------------
+    function joinGame() {
+      const name = document.getElementById('username-input').value.trim();
+      const plat = document.getElementById('platform-select').value;
+      if (!name) { alert('Ole hyvä ja anna nimimerkki.'); return; }
+      myUsername = name;
+      localStorage.setItem('mp_user', myUsername);
+      sendJoin(plat);
+      document.getElementById('player-indicator').textContent = `Pelaat nimellä: ${myUsername} (${plat.toUpperCase()})`;
+      window.audioManager.unlock();
+    }
+
+    function sendJoin(platform) {
+      send({ type: 'join', username: myUsername, platform: platform || 'guest', channel: '' });
+    }
+
+    // -------------------------------------------------------------------------
+    // Voting
+    // -------------------------------------------------------------------------
+    function vote(letter) {
+      if (gamePhase !== 'voting') return;
+      if (myVote) return;
+      myVote = letter;
+      send({ type: 'vote', answer: letter });
+
+      window.audioManager.unlock();
+
+      ['A','B','C','D'].forEach(l => {
+        const btn = document.getElementById('opt-' + l);
+        if (btn) btn.classList.toggle('voted', l === letter);
+      });
+    }
+
+    // Allow keyboard shortcuts A, B, C, D
+    window.addEventListener('keydown', (e) => {
+      const key = e.key.toUpperCase();
+      if (['A','B','C','D'].includes(key) && document.activeElement.tagName !== 'INPUT') {
+        vote(key);
+      }
+    });
+
+    // -------------------------------------------------------------------------
+    // Message Dispatcher
+    // -------------------------------------------------------------------------
+    function handleMessage(msg) {
+      switch (msg.type) {
+        case 'game_state':         onGameState(msg.state); break;
+        case 'question':           onQuestion(msg); break;
+        case 'vote_update':        onVoteUpdate(msg); break;
+        case 'answer_reveal':      onReveal(msg); break;
+        case 'timer':              onTimer(msg.timeLeft); break;
+        case 'leaderboard_update': onLeaderboard(msg.top10); break;
+        case 'chat_message':       onChatMessage(msg); break;
+        case 'lifeline_result':    onLifelineResult(msg); break;
+        case 'game_over':          onGameOver(msg); break;
+      }
+    }
+
+    function onGameState(state) {
+      gamePhase = state.phase;
+      updatePhaseLabel(state.phase);
+
+      if (!state.active || state.phase === 'waiting') {
+        document.getElementById('waiting-screen').style.display = 'block';
+        document.getElementById('question-box').style.display = 'none';
+        window.audioManager.stopSuspenseMusic();
+        return;
+      }
+
+      if (state.currentQuestion) {
+        showQuestion(state.currentQuestion, state.eliminatedAnswers || [], state.questionNumber, state.totalQuestions);
+      }
+
+      if (state.lifelines) renderLifelines(state.lifelines);
+      updateVoteBars(state.votes || {});
+      updateLadder(state.questionNumber);
+    }
+
+    function onQuestion(msg) {
+      myVote = null;
+      gamePhase = 'voting';
+      maxTime = msg.timeLeft;
+
+      // Start suspense soundtrack & play dramatic question gong!
+      window.audioManager.playSuspenseMusic();
+      window.audioManager.playGongSound();
+
+      showQuestion(msg.question, [], msg.questionNumber, msg.totalQuestions);
+      onTimer(msg.timeLeft);
+      updatePhaseLabel('voting');
+      updateLadder(msg.questionNumber);
+
+      const res = document.getElementById('result-message');
+      res.textContent = '';
+      res.className = '';
+
+      const banner = document.getElementById('lifeline-banner');
+      if (banner) banner.style.display = 'none';
+
+      updateVoteBars({ A: 0, B: 0, C: 0, D: 0 });
+
+      ['A','B','C','D'].forEach(l => {
+        const btn = document.getElementById('opt-' + l);
+        btn.disabled = false;
+        btn.className = 'diamond-btn';
+      });
+    }
+
+    function showQuestion(q, eliminated, currentNum, totalNum) {
+      document.getElementById('waiting-screen').style.display = 'none';
+      document.getElementById('question-box').style.display = 'block';
+
+      if (currentNum && totalNum) {
+        document.getElementById('led-round').textContent = `${String(currentNum).padStart(2,'0')}/${String(totalNum).padStart(2,'0')}`;
+      }
+
+      document.getElementById('question-meta').textContent = `${q.category || 'Yleistieto'} · ${diffLabel(q.difficulty)}`;
+      document.getElementById('question-text').textContent = q.question_fi;
+
+      const opts = { A: q.option_a, B: q.option_b, C: q.option_c, D: q.option_d };
+      for (const [letter, text] of Object.entries(opts)) {
+        const btn = document.getElementById('opt-' + letter);
+        const textSpan = document.getElementById('text-' + letter);
+        if (textSpan) textSpan.textContent = text;
+        const isEliminated = (eliminated || []).includes(letter);
+        btn.disabled = isEliminated;
+        btn.className = 'diamond-btn' + (isEliminated ? ' eliminated' : '');
+      }
+
+      if (myVote) {
+        const mb = document.getElementById('opt-' + myVote);
+        if (mb && !mb.disabled) mb.classList.add('voted');
+      }
+    }
+
+    function onVoteUpdate(msg) {
+      updateVoteBars(msg.votes);
+    }
+
+    function updateVoteBars(votes) {
+      const total = Math.max(1, Object.values(votes).reduce((a, b) => a + b, 0));
+      for (const l of ['A','B','C','D']) {
+        const cnt = votes[l] || 0;
+        const pct = Math.round((cnt / total) * 100);
+        const bar = document.getElementById('vbar-' + l);
+        const txt = document.getElementById('vcnt-' + l);
+        if (bar) bar.style.height = pct + '%';
+        if (txt) txt.textContent = `${pct}% (${cnt})`;
+      }
+    }
+
+    function onReveal(msg) {
+      gamePhase = 'revealing';
+      updatePhaseLabel('revealing');
+      window.audioManager.stopSuspenseMusic();
+
+      for (const l of ['A','B','C','D']) {
+        const btn = document.getElementById('opt-' + l);
+        btn.disabled = true;
+        if (l === msg.correct) btn.classList.add('correct');
+      }
+
+      const res = document.getElementById('result-message');
+      if (myVote) {
+        if (myVote === msg.correct) {
+          res.textContent = '🌟 OIKEIN VASTATTU!';
+          res.style.color = '#10b981';
+          userScore += 500;
+          userStreak += 1;
+          window.audioManager.playCorrectSound();
+        } else {
+          res.textContent = `❌ VÄÄRIN. Oikea vastaus oli: ${msg.correct}`;
+          res.style.color = '#ef4444';
+          userStreak = 1;
+          const wrongBtn = document.getElementById('opt-' + myVote);
+          if (wrongBtn) wrongBtn.classList.add('wrong');
+          window.audioManager.playWrongSound();
+        }
+        document.getElementById('led-score').textContent = String(userScore).padStart(5, '0');
+        document.getElementById('led-streak').textContent = `x${userStreak}`;
+      } else {
+        res.textContent = `Vastausaika päättyi! Oikea vastaus: ${msg.correct}`;
+        res.style.color = '#ffd700';
+      }
+      updateVoteBars(msg.votes);
+    }
+
+    function onTimer(timeLeft) {
+      document.getElementById('timer-text').textContent = timeLeft + 's';
+      const pct = Math.max(0, (timeLeft / maxTime) * 100);
+      const bar = document.getElementById('timer-bar');
+      bar.style.width = pct + '%';
+      bar.style.background = timeLeft > 10
+        ? 'linear-gradient(90deg, #ffd700, #f59e0b)'
+        : 'linear-gradient(90deg, #ef4444, #dc2626)';
+    }
+
+    function onLeaderboard(top10) {
+      const list = document.getElementById('score-list');
+      if (!top10 || !top10.length) {
+        list.innerHTML = '<div style="color:#6b7280;font-style:italic;">Ei pelaajia vielä</div>';
+        return;
+      }
+      list.innerHTML = top10.map((p, i) =>
+        `<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+          <span><strong>#${i+1}</strong> ${esc(p.username)} <small style="color:#9ca3af;">(${p.platform})</small></span>
+          <span style="color:#ffd700;font-family:'Anton',sans-serif;">${p.score} pistettä</span>
+        </div>`
+      ).join('');
+    }
+
+    function onChatMessage(msg) {
+      const panel = document.getElementById('chat-panel');
+      const div = document.createElement('div');
+      div.className = 'chat-row ' + msg.platform;
+      div.innerHTML = `<span class="c-user">${esc(msg.username)}</span>: ${esc(msg.message)}`;
+      panel.appendChild(div);
+      panel.scrollTop = panel.scrollHeight;
+      while (panel.children.length > 80) panel.removeChild(panel.firstChild);
+    }
+
+    function onLifelineResult(msg) {
+      window.audioManager.playLifelineSound();
+      const banner = document.getElementById('lifeline-banner');
+
+      if (msg.lifeline === 'removeWrong' && msg.data?.eliminated) {
+        msg.data.eliminated.forEach(l => {
+          const btn = document.getElementById('opt-' + l);
+          if (btn) {
+            btn.classList.add('eliminated');
+            btn.disabled = true;
+          }
+        });
+        if (banner) {
+          banner.style.display = 'block';
+          banner.style.borderColor = '#ef4444';
+          banner.style.color = '#fca5a5';
+          banner.textContent = '❌ 50:50 POISTETTU 2 VÄÄRÄÄ VASTAUSTA!';
+        }
+      }
+      if (msg.lifeline === 'extraHint') {
+        if (banner) {
+          banner.style.display = 'block';
+          banner.style.borderColor = '#60a5fa';
+          banner.style.color = '#93c5fd';
+          banner.textContent = '💡 LISÄVIHJE: ' + msg.data.hint;
+        }
+      }
+      if (msg.lifeline === 'askAudience') {
+        const d = msg.data.distribution;
+        if (banner) {
+          banner.style.display = 'block';
+          banner.style.borderColor = '#ffd700';
+          banner.style.color = '#ffd700';
+          banner.innerHTML = `👥 <strong>KYSY YLEISÖLTÄ -TULOKSET:</strong><br>A: ${d.A}% &nbsp;|&nbsp; B: ${d.B}% &nbsp;|&nbsp; C: ${d.C}% &nbsp;|&nbsp; D: ${d.D}%`;
+        }
+        const vsec = document.getElementById('vote-section');
+        if (vsec) {
+          vsec.style.boxShadow = '0 0 25px rgba(255, 215, 0, 0.45)';
+          vsec.style.borderColor = '#ffd700';
+        }
+      }
+      if (msg.lifeline === 'addTime') {
+        if (banner) {
+          banner.style.display = 'block';
+          banner.style.borderColor = '#10b981';
+          banner.style.color = '#6ee7b7';
+          banner.textContent = '⏱️ AIKAA LISÄTTY +30 SEKUNTIA!';
+        }
+      }
+    }
+
+    function onGameOver(msg) {
+      gamePhase = 'game_over';
+      updatePhaseLabel('game_over');
+      window.audioManager.stopSuspenseMusic();
+      document.getElementById('question-box').style.display = 'none';
+      document.getElementById('waiting-screen').style.display = 'block';
+      document.getElementById('waiting-screen').innerHTML = `
+        <div style="font-size:3.5rem;margin-bottom:12px;">🏆</div>
+        <h2 style="font-family:'Anton',sans-serif;font-size:2.4rem;color:#ffd700;letter-spacing:1.5px;margin-bottom:12px;">PELI PÄÄTTYI!</h2>
+        <p style="color:#d1d5db;font-size:1.1rem;margin-bottom:20px;">Lopulliset tulokset:</p>
+        <div style="max-width:400px;margin:0 auto 24px auto;">
+          ${msg.finalLeaderboard.map((p,i) => `
+            <div style="display:flex;justify-content:space-between;padding:8px 14px;margin-bottom:6px;border-radius:6px;background:rgba(255,255,255,0.06);font-size:1.05rem;">
+              <span><strong>#${i+1}</strong> ${esc(p.username)}</span>
+              <strong style="color:#ffd700;font-family:'Anton',sans-serif;">${p.score} pistettä</strong>
+            </div>
+          `).join('')}
+        </div>
+        <a class="top-btn" href="/leaderboard" style="padding:10px 20px;font-size:1rem;">Katso koko tulostaulukko</a>
+      `;
+    }
+
+    function renderLifelines(ll) {
+      for (const [key, pillId] of [
+        ['removeWrong', 'pill-removeWrong'],
+        ['addTime', 'pill-addTime'],
+        ['extraHint', 'pill-extraHint'],
+        ['askAudience', 'pill-askAudience']
+      ]) {
+        const el = document.getElementById(pillId);
+        if (el && ll[key]) {
+          const used = ll[key].used >= ll[key].total;
+          el.classList.toggle('used', used);
+        }
+      }
+    }
+
+    function updateLadder(questionNumber) {
+      const steps = document.querySelectorAll('.ladder-step');
+      steps.forEach(st => {
+        const q = parseInt(st.getAttribute('data-q'));
+        st.classList.toggle('active', q === questionNumber);
+      });
+    }
+
+    function updatePhaseLabel(phase) {
+      const labels = {
+        waiting:   '⏳ ODOTETAAN PELIÄ',
+        voting:    '🗳️ CHATTILAISET ÄÄNESTÄVÄT',
+        host_turn: '🎤 ISÄNNÄN VUORO',
+        revealing: '✅ VASTAUS PALJASTETTU',
+        game_over: '🏁 PELI OHI',
+      };
+      document.getElementById('phase-label').textContent = labels[phase] || phase;
+    }
+
+    function diffLabel(d) {
+      return { easy: 'Helppo', medium: 'Keskivaikea', hard: 'Vaikea' }[d] || d;
+    }
+
+    function esc(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    async function checkAuth() {
+      try {
+        const r = await fetch('/auth/me');
+        const d = await r.json();
+        if (d.user) {
+          myUsername = d.user.username;
+          document.getElementById('username-input').value = myUsername;
+          document.getElementById('platform-select').value = d.user.platform || 'twitch';
+          document.getElementById('player-indicator').textContent = `Kirjautunut: ${myUsername} (${d.user.platform.toUpperCase()})`;
+        } else {
+          const saved = localStorage.getItem('mp_user');
+          if (saved) {
+            document.getElementById('username-input').value = saved;
+            myUsername = saved;
+          }
+        }
+      } catch {}
+    }
+
+    // Initialize
+    checkAuth().then(connect);
+  </script>
+</body>
+</html>
