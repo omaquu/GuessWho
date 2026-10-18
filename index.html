@@ -648,10 +648,17 @@
         <div id="waiting-screen" style="text-align:center;padding:50px 20px;">
           <div style="font-size:3rem;margin-bottom:12px;">⏳</div>
           <h2 style="font-family:'Anton',sans-serif;font-size:2rem;color:#ffd700;letter-spacing:1px;margin-bottom:10px;" data-i18n="waiting_title">ODOTETAAN PELIN ALKUA</h2>
-          <p style="color:#9ca3af;font-size:1.05rem;max-width:520px;margin:0 auto 20px auto;" data-i18n="waiting_desc">
+          <p style="color:#9ca3af;font-size:1.05rem;max-width:520px;margin:0 auto 16px auto;" data-i18n="waiting_desc">
             Isäntä aloittaa uuden kierroksen pian. Liity peliin nimimerkilläsi tai osallistu suoraan Kick/Twitch-chatissa kirjoittamalla A, B, C tai D!
           </p>
-          <div id="status" style="color:#60a5fa;font-weight:600;" data-i18n="status_connecting">Yhdistetään palvelimeen...</div>
+          <div id="status" style="color:#60a5fa;font-weight:600;margin-bottom:16px;" data-i18n="status_connecting">Yhdistetään palvelimeen...</div>
+          <div style="display:inline-flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:10px;padding:8px 18px;background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.35);border-radius:24px;">
+            <span style="font-size:1.1rem;">📺</span>
+            <span style="font-size:0.95rem;color:#e2e8f0;">Twitch-kanava: <strong id="waiting-twitch-tag" style="color:#c084fc;">#omaquu</strong></span>
+            <span style="color:#64748b;">•</span>
+            <span style="font-size:0.92rem;color:#cbd5e1;">Tila: <strong id="waiting-mode-tag" style="color:#fbbf24;">Kuka sen sanoi?</strong></span>
+            <button onclick="openSettingsModal()" style="background:none;border:none;color:#38bdf8;cursor:pointer;font-size:0.85rem;text-decoration:underline;margin-left:4px;">(Asetukset)</button>
+          </div>
         </div>
 
         <!-- Active Question Box View -->
@@ -796,8 +803,9 @@
       <h2 data-i18n="modal_title">⚙️ Kanava- ja peliasetukset</h2>
 
       <div class="form-group">
-        <label data-i18n="label_twitch_channel">Twitch-kanava:</label>
-        <input type="text" id="cfg-twitch" placeholder="esim. omaquu tai kanavan nimi" />
+        <label data-i18n="label_twitch_channel">Twitch-kanava (sitaatit & chat):</label>
+        <input type="text" id="cfg-twitch" placeholder="esim. omaquu" value="omaquu" />
+        <small style="color:#9ca3af;font-size:0.75rem;margin-top:3px;display:block;">Peli hakee tämän kanavan oikeat chat-viestit arvuuttelua varten.</small>
       </div>
 
       <div class="form-group">
@@ -809,8 +817,8 @@
       <div class="form-group">
         <label data-i18n="label_game_mode">Pelimoodi:</label>
         <select id="cfg-mode">
+          <option value="chat_quotes" selected data-i18n="mode_stream">Kuka sen sanoi? (Twitch-chat)</option>
           <option value="trivia" data-i18n="mode_trivia">Yleistieto & Trivia</option>
-          <option value="chat_quotes" data-i18n="mode_stream">Striimikulttuuri & Meemit</option>
         </select>
       </div>
 
@@ -1082,30 +1090,38 @@
     // -------------------------------------------------------------------------
     function startHostGame() {
       window.audioManager.unlock();
+      const channel = (document.getElementById('cfg-twitch')?.value || localStorage.getItem('mp_twitch_channel') || 'omaquu').trim().replace('#', '');
+      const mode = document.getElementById('cfg-mode')?.value || 'chat_quotes';
+      const count = parseInt(document.getElementById('cfg-count')?.value) || 10;
+      const votingTime = parseInt(document.getElementById('cfg-time')?.value) || 30;
+
       if (isBackendConnected) {
         fetch('api/game/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            mode: document.getElementById('cfg-mode')?.value || 'trivia',
-            questionCount: parseInt(document.getElementById('cfg-count')?.value) || 10,
-            votingTimeSeconds: parseInt(document.getElementById('cfg-time')?.value) || 30
+            mode,
+            channel,
+            questionCount: count,
+            votingTimeSeconds: votingTime
           })
         }).catch(() => {
           // If backend API fails, start standalone engine
           window.standaloneEngine.startGame({
             lang: window.i18n.lang,
-            count: parseInt(document.getElementById('cfg-count')?.value) || 10,
-            mode: document.getElementById('cfg-mode')?.value || 'trivia',
-            votingTime: parseInt(document.getElementById('cfg-time')?.value) || 30
+            count,
+            mode,
+            channel,
+            votingTime
           });
         });
       } else {
         window.standaloneEngine.startGame({
           lang: window.i18n.lang,
-          count: parseInt(document.getElementById('cfg-count')?.value) || 10,
-          mode: document.getElementById('cfg-mode')?.value || 'trivia',
-          votingTime: parseInt(document.getElementById('cfg-time')?.value) || 30
+          count,
+          mode,
+          channel,
+          votingTime
         });
       }
     }
@@ -1210,8 +1226,15 @@
         document.getElementById('led-round').textContent = `${String(currentNum).padStart(2,'0')}/${String(totalNum).padStart(2,'0')}`;
       }
 
-      document.getElementById('question-meta').textContent = `${q.category || 'Trivia'} · ${diffLabel(q.difficulty)}`;
-      document.getElementById('question-text').textContent = q.question_fi;
+      if (q.mode === 'chat_quotes' || (q.category && q.category.includes('Kuka sen sanoi'))) {
+        document.getElementById('question-meta').innerHTML = `💬 <strong>${esc(q.category || 'Kuka sen sanoi?')}</strong>`;
+        const quoteText = q.question_fi.startsWith('"') ? q.question_fi : `"${q.question_fi}"`;
+        const prefix = window.i18n ? window.i18n.t('who_said_this') : 'Kuka sanoi chatissa:';
+        document.getElementById('question-text').innerHTML = `<span style="font-size:0.85em;color:#94a3b8;display:block;margin-bottom:8px;text-transform:uppercase;letter-spacing:1.5px;font-family:'Rubik',sans-serif;">${esc(prefix)}</span><span style="color:#ffd700;font-style:italic;">${esc(quoteText)}</span>`;
+      } else {
+        document.getElementById('question-meta').textContent = `${q.category || 'Trivia'} · ${diffLabel(q.difficulty)}`;
+        document.getElementById('question-text').textContent = q.question_fi;
+      }
 
       const opts = { A: q.option_a, B: q.option_b, C: q.option_c, D: q.option_d };
       for (const [letter, text] of Object.entries(opts)) {
@@ -1482,8 +1505,19 @@
     // -------------------------------------------------------------------------
     // Settings Modal
     // -------------------------------------------------------------------------
+    function updateWaitingChannelTags() {
+      const tw = localStorage.getItem('mp_twitch_channel') || 'omaquu';
+      const mode = document.getElementById('cfg-mode')?.value || 'chat_quotes';
+      const twEl = document.getElementById('waiting-twitch-tag');
+      const modeEl = document.getElementById('waiting-mode-tag');
+      if (twEl) twEl.textContent = '#' + tw;
+      if (modeEl) {
+        modeEl.textContent = mode === 'chat_quotes' ? 'Kuka sen sanoi?' : 'Yleistieto & Trivia';
+      }
+    }
+
     function openSettingsModal() {
-      document.getElementById('cfg-twitch').value = localStorage.getItem('mp_twitch_channel') || '';
+      document.getElementById('cfg-twitch').value = localStorage.getItem('mp_twitch_channel') || 'omaquu';
       document.getElementById('cfg-kick').value = localStorage.getItem('mp_kick_channel') || '';
       document.getElementById('settings-modal').classList.remove('hidden');
     }
@@ -1493,7 +1527,7 @@
     }
 
     function saveSettingsAndConnect() {
-      const tw = document.getElementById('cfg-twitch').value.trim();
+      const tw = (document.getElementById('cfg-twitch').value.trim().replace('#', '') || 'omaquu');
       const kc = document.getElementById('cfg-kick').value.trim();
 
       if (tw) {
@@ -1512,6 +1546,7 @@
         }
       }
 
+      updateWaitingChannelTags();
       closeSettingsModal();
     }
 
@@ -1520,6 +1555,17 @@
     // -------------------------------------------------------------------------
     window.addEventListener('DOMContentLoaded', () => {
       window.i18n.apply();
+
+      if (!localStorage.getItem('mp_twitch_channel')) {
+        localStorage.setItem('mp_twitch_channel', 'omaquu');
+      }
+
+      const cfgMode = document.getElementById('cfg-mode');
+      if (cfgMode) {
+        cfgMode.addEventListener('change', updateWaitingChannelTags);
+      }
+
+      updateWaitingChannelTags();
 
       if (myUsername) {
         document.getElementById('username-input').value = myUsername;

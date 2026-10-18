@@ -225,9 +225,15 @@ class StandaloneGameEngine {
   async startGame(config = {}) {
     const lang = config.lang || window.i18n?.lang || 'fi';
     const count = config.count || 10;
-    const mode = config.mode || 'trivia';
+    const mode = config.mode || 'chat_quotes';
+    const channel = (config.channel || this.twitchChannel || localStorage.getItem('mp_twitch_channel') || 'omaquu').toLowerCase().replace('#', '').trim();
     this.votingTime = config.votingTime || 30;
     this.hostTime = config.hostTime || 30;
+
+    // Connect to Twitch IRC if not connected to this channel
+    if (channel && (!this.twitchWs || this.twitchChannel !== channel)) {
+      this.connectTwitch(channel);
+    }
 
     // Reset lifelines
     this.lifelines = {
@@ -238,7 +244,7 @@ class StandaloneGameEngine {
     };
     this.sessionScores = {};
 
-    this.questions = await window.getQuizQuestions(lang, mode, count);
+    this.questions = await window.getQuizQuestions(lang, mode, count, '', channel);
     this.questionIndex = 0;
     this.active = true;
 

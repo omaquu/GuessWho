@@ -23,6 +23,7 @@ const http       = require('http');
 const WebSocket  = require('ws');
 const cors       = require('cors');
 const path       = require('path');
+const fs         = require('fs');
 const crypto     = require('crypto');
 const fetch      = globalThis.fetch;
 const uuidv4     = () => crypto.randomUUID();
@@ -46,6 +47,7 @@ const server = http.createServer(app);
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/data', express.static(path.join(__dirname, 'data')));
 
 // Minimal cookie-based session without a heavy dependency
 const SESSION_SECRET = process.env.SESSION_SECRET || 'change_this_secret';
@@ -438,6 +440,152 @@ function decodeHTMLEntities(str) {
     .replace(/&ouml;/g,  'ö')
     .replace(/&auml;/g,  'ä')
     .replace(/&aring;/g, 'å');
+}
+
+/**
+ * Fetch chat messages from samppalandia API or local cache for a given channel,
+ * and format them into "Kuka sen sanoi?" ("Who said it?") quiz questions.
+ * @param {string} channel
+ * @param {number} count
+ */
+async function fetchAndGenerateChannelQuotes(channel = 'omaquu', count = 10) {
+  const normChannel = (channel || 'omaquu').toLowerCase().replace('#', '').trim() || 'omaquu';
+  let chatData = null;
+
+  // 1. Try fetching live from samppalandia.wtf API
+  try {
+    const url = `https://samppalandia.wtf/kukasano/api/messages.php?channel=${encodeURIComponent(normChannel)}&mode=kuka`;
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+      signal: AbortSignal.timeout(6000)
+    });
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.ok && Array.isArray(json.messages) && json.messages.length > 0) {
+        chatData = json;
+        // Save/update cache
+        try {
+          const cacheDirs = [
+            path.join(__dirname, 'data'),
+            path.join(__dirname, 'public', 'data')
+          ];
+          for (const d of cacheDirs) {
+            if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
+            fs.writeFileSync(path.join(d, `quotes_${normChannel}.json`), JSON.stringify(json, null, 2), 'utf8');
+          }
+          console.log(`[Quotes] Successfully fetched and cached ${json.messages.length} messages for #${normChannel}`);
+        } catch (e) {
+          console.warn('[Quotes] Cache save warning:', e.message);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(`[Quotes] Live fetch for #${normChannel} failed (${err.message}), falling back to cached files...`);
+  }
+
+  // 2. If live fetch failed, check local cached files
+  if (!chatData) {
+    const candidatePaths = [
+      path.join(__dirname, 'data', `quotes_${normChannel}.json`),
+      path.join(__dirname, 'public', 'data', `quotes_${normChannel}.json`),
+      path.join(__dirname, 'data', 'quotes_omaquu.json'),
+      path.join(__dirname, 'public', 'data', 'quotes_omaquu.json')
+    ];
+    for (const p of candidatePaths) {
+      if (fs.existsSync(p)) {
+        try {
+          chatData = JSON.parse(fs.readFileSync(p, 'utf8'));
+          console.log(`[Quotes] Loaded cached quotes from ${p} (${chatData.messages?.length} messages)`);
+          break;
+        } catch {}
+      }
+    }
+  }
+
+  if (!chatData || !Array.isArray(chatData.messages) || chatData.messages.length === 0) {
+    console.warn(`[Quotes] No quotes found for #${normChannel}`);
+    return [];
+  }
+
+  // Gather chatters
+  const chatterSet = new Set();
+  if (Array.isArray(chatData.chatters)) {
+    chatData.chatters.forEach(c => {
+      const name = c.displayName || c.login;
+      if (name) chatterSet.add(name);
+    });
+  }
+  chatData.messages.forEach(m => {
+    const name = m.displayName || m.login;
+    if (name) chatterSet.add(name);
+  });
+  const allChatters = Array.from(chatterSet);
+
+  // Filter messages suitable for a quiz question
+  const validMessages = chatData.messages.filter(m => {
+    if (!m.text) return false;
+    const t = m.text.trim();
+    if (t.length < 8 || t.length > 130) return false;
+    if (/^[!#?]/.test(t)) return false; // commands like !sr, !rank, !points
+    if (/^(A|B|C|D|1|2|3|4)$/i.test(t)) return false; // single letter voting spam
+    const author = m.displayName || m.login;
+    if (!author) return false;
+    if (t.toLowerCase().includes(author.toLowerCase())) return false; // avoid giving away author name
+    return true;
+  });
+
+  if (validMessages.length === 0) return [];
+
+  // Shuffle messages
+  const shuffled = [...validMessages].sort(() => Math.random() - 0.5);
+  const questions = [];
+
+  for (let i = 0; i < Math.min(count, shuffled.length); i++) {
+    const msg = shuffled[i];
+    const author = msg.displayName || msg.login;
+
+    // Pick 3 decoy chatters distinct from author
+    const decoys = allChatters
+      .filter(c => c.toLowerCase() !== author.toLowerCase())
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 3);
+
+    while (decoys.length < 3) {
+      decoys.push(`Chattaaja_${decoys.length + 1}`);
+    }
+
+    const options = [author, ...decoys].sort(() => Math.random() - 0.5);
+    const letters = ['A', 'B', 'C', 'D'];
+    const correctLetter = letters[options.indexOf(author)];
+
+    let hint = 'Twitch-chatin viesti';
+    if (msg.sentAt) {
+      try {
+        const d = new Date(msg.sentAt);
+        const day = d.getDate();
+        const month = d.getMonth() + 1;
+        const hours = String(d.getHours()).padStart(2, '0');
+        const mins = String(d.getMinutes()).padStart(2, '0');
+        hint = `Lähetetty chatissa ${day}.${month}. klo ${hours}:${mins}`;
+      } catch {}
+    }
+
+    questions.push({
+      id: -(1000 + i),
+      question_fi: `"${msg.text.trim()}"`,
+      option_a: options[0],
+      option_b: options[1],
+      option_c: options[2],
+      option_d: options[3],
+      correct_answer: correctLetter,
+      difficulty: 'medium',
+      category: `Kuka sen sanoi? · #${normChannel}`,
+      hint,
+      mode: 'chat_quotes'
+    });
+  }
+
+  return questions;
 }
 
 // ---------------------------------------------------------------------------
@@ -836,6 +984,18 @@ app.delete('/api/questions/:id', (req, res) => {
   }
 });
 
+// ---- Channel Quotes API ----
+app.get('/api/channel-quotes/:channel', async (req, res) => {
+  const channel = req.params.channel || 'omaquu';
+  const count = parseInt(req.query.count) || 10;
+  try {
+    const questions = await fetchAndGenerateChannelQuotes(channel, count);
+    res.json({ ok: true, channel, count: questions.length, questions });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // ---- Game state ----
 app.get('/api/game-state', (_req, res) => {
   res.json({
@@ -861,20 +1021,32 @@ app.post('/api/game/start', async (req, res) => {
     return res.status(409).json({ success: false, error: 'Game already running' });
   }
 
-  const mode               = req.body.mode               || 'trivia';
+  const mode               = req.body.mode               || 'chat_quotes';
   const questionCount      = Math.min(parseInt(req.body.questionCount) || 10, 50);
   const votingTimeSeconds  = Math.min(parseInt(req.body.votingTimeSeconds) || 30, 120);
   const hostTimeSeconds    = Math.min(parseInt(req.body.hostTimeSeconds)   || 30, 120);
-  const channel            = req.body.channel            || null;
+  const channel            = (req.body.channel || (twitchIrcChannel ? twitchIrcChannel.replace('#', '') : 'omaquu')).toLowerCase().trim();
 
-  // Load questions from DB
-  let questions = getQuestions(mode, questionCount);
+  let questions = [];
 
-  // Fallback to Open Trivia API if not enough questions in DB
-  if (questions.length < questionCount && mode === 'trivia') {
-    console.log(`[Game] Only ${questions.length}/${questionCount} questions in DB — fetching from OpenTrivia...`);
-    const apiQuestions = await fetchOpenTriviaQuestions(questionCount - questions.length);
-    questions = [...questions, ...apiQuestions];
+  // If in chat quotes mode, fetch real messages from the Twitch channel
+  if (mode === 'chat_quotes' || mode === 'quotes') {
+    console.log(`[Game] Fetching real Twitch quotes for channel #${channel}...`);
+    questions = await fetchAndGenerateChannelQuotes(channel, questionCount);
+    if (questions.length < questionCount) {
+      console.log(`[Game] Generated ${questions.length} quotes, filling with DB quotes...`);
+      const fallback = getQuestions('chat_quotes', questionCount - questions.length);
+      questions = [...questions, ...fallback];
+    }
+  } else {
+    // Load trivia questions from DB
+    questions = getQuestions(mode, questionCount);
+    // Fallback to Open Trivia API if not enough questions in DB
+    if (questions.length < questionCount && mode === 'trivia') {
+      console.log(`[Game] Only ${questions.length}/${questionCount} questions in DB — fetching from OpenTrivia...`);
+      const apiQuestions = await fetchOpenTriviaQuestions(questionCount - questions.length);
+      questions = [...questions, ...apiQuestions];
+    }
   }
 
   if (questions.length === 0) {

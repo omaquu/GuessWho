@@ -86,11 +86,12 @@ const translations = {
 
     // Settings Modal
     modal_title: '⚙️ Kanava- ja peliasetukset',
-    label_twitch_channel: 'Twitch-kanava:',
+    label_twitch_channel: 'Twitch-kanava (sitaatit & chat):',
     label_kick_channel: 'Kick-kanava (tai chatroom ID):',
     label_game_mode: 'Pelimoodi:',
+    mode_stream: 'Kuka sen sanoi? (Twitch-chat)',
     mode_trivia: 'Yleistieto & Trivia',
-    mode_stream: 'Striimikulttuuri & Meemit',
+    who_said_this: 'Kuka sanoi chatissa:',
     label_question_count: 'Kysymysten määrä:',
     label_voting_time: 'Äänestysaika (s):',
     btn_save_settings: 'Tallenna ja yhdistä',
@@ -183,11 +184,12 @@ const translations = {
 
     // Settings Modal
     modal_title: '⚙️ Stream & Channel Settings',
-    label_twitch_channel: 'Twitch Channel:',
+    label_twitch_channel: 'Twitch Channel (quotes & chat):',
     label_kick_channel: 'Kick Channel (or chatroom ID):',
     label_game_mode: 'Game Mode:',
+    mode_stream: 'Who Said It? (Twitch Chat Quotes)',
     mode_trivia: 'General Trivia & Knowledge',
-    mode_stream: 'Stream Culture & Memes',
+    who_said_this: 'Who said in chat:',
     label_question_count: 'Number of Questions:',
     label_voting_time: 'Voting Time (s):',
     btn_save_settings: 'Save & Connect',

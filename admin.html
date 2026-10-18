@@ -169,8 +169,8 @@
         <div>
           <label>Pelimuoto</label>
           <select id="mode-select">
+            <option value="chat_quotes" selected>Chat-sitaatit ("Kuka sen sanoi?")</option>
             <option value="trivia">Tietokilpailu</option>
-            <option value="chat_quotes">Chat-sitaatit</option>
           </select>
         </div>
         <div>
@@ -188,8 +188,8 @@
           <input type="number" id="host-time" value="30" min="10" max="120" />
         </div>
         <div>
-          <label>Kanava (valinnainen)</label>
-          <input type="text" id="channel-input" placeholder="esim. minunkanava" />
+          <label>Twitch-kanava (sitaatit & chat)</label>
+          <input type="text" id="channel-input" placeholder="esim. omaquu" value="omaquu" />
         </div>
       </div>
       <button class="btn btn-green" onclick="startGame()">▶ Aloita peli</button>
@@ -441,7 +441,7 @@
         questionCount:      parseInt(document.getElementById('q-count').value),
         votingTimeSeconds:  parseInt(document.getElementById('voting-time').value),
         hostTimeSeconds:    parseInt(document.getElementById('host-time').value),
-        channel:            document.getElementById('channel-input').value.trim() || null,
+        channel:            (document.getElementById('channel-input').value.trim() || document.getElementById('twitch-channel')?.value?.trim() || 'omaquu').replace('#', ''),
       });
       if (data.success) log(`Peli aloitettu — ${data.totalQuestions} kysymystä`, 'ok');
       else log('Virhe: ' + data.error, 'err');
