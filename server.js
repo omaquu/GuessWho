@@ -952,6 +952,25 @@ app.post('/api/game/answer', (req, res) => {
 });
 
 /**
+ * GET /api/kick-chatroom/:slug
+ * Resolve Kick slug to numeric chatroom ID without CORS issues.
+ */
+app.get('/api/kick-chatroom/:slug', async (req, res) => {
+  const slug = (req.params.slug || '').trim().toLowerCase();
+  if (slug === 'omaquu') return res.json({ chatroomId: '605983' });
+  try {
+    const r = await fetch(`https://kick.com/api/v2/channels/${encodeURIComponent(slug)}`, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' }
+    });
+    if (r.ok) {
+      const d = await r.json();
+      if (d?.chatroom?.id) return res.json({ chatroomId: String(d.chatroom.id) });
+    }
+  } catch {}
+  res.status(404).json({ error: 'Not found' });
+});
+
+/**
  * POST /api/game/use-lifeline
  * Body: { lifeline: 'removeWrong'|'addTime'|'extraHint'|'askAudience' }
  */

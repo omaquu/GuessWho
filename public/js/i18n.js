@@ -67,8 +67,10 @@ const translations = {
     score_panel_title: '🏆 Tämän pelin kärki',
     score_empty: 'Ei pelaajia vielä',
 
-    // Money ladder
-    ladder_title: '💰 VOITTOTAULUKKO',
+    // Points ladder
+    ladder_title: '🎯 PISTETAULUKKO',
+    my_points_lbl: 'Omat pisteet:',
+    voted_locked: 'Vastaus lukittu! Tarkistetaan...',
 
     // Game Over
     game_over_title: 'PELI PÄÄTTYI!',
@@ -155,8 +157,10 @@ const translations = {
     score_panel_title: '🏆 Current Game Top Players',
     score_empty: 'No players yet',
 
-    // Money ladder
-    ladder_title: '💰 PRIZE LADDER',
+    // Points ladder
+    ladder_title: '🎯 POINTS LADDER',
+    my_points_lbl: 'My Points:',
+    voted_locked: 'Answer locked in! Checking...',
 
     // Game Over
     game_over_title: 'GAME OVER!',

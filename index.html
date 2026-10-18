@@ -428,15 +428,36 @@
       padding-bottom: 8px;
       border-bottom: 1px solid rgba(255, 215, 0, 0.2);
     }
+    .ladder-score-box {
+      background: rgba(255, 215, 0, 0.08);
+      border: 1px solid rgba(255, 215, 0, 0.25);
+      border-radius: 8px;
+      padding: 8px 10px;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+    .ladder-score-lbl {
+      font-size: 0.72rem;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .ladder-score-val {
+      font-family: 'Anton', sans-serif;
+      font-size: 1.4rem;
+      color: #ffd700;
+      letter-spacing: 1px;
+    }
     .ladder-list { display: flex; flex-direction: column; gap: 3px; }
     .ladder-step {
       display: flex;
       justify-content: space-between;
-      padding: 3px 8px;
+      padding: 4px 8px;
       border-radius: 4px;
       font-size: 0.82rem;
       font-weight: 600;
       color: #e5e7eb;
+      transition: all 0.2s ease;
     }
     .ladder-step.milestone {
       color: #ffd700;
@@ -454,6 +475,11 @@
       color: #000 !important;
       box-shadow: 0 0 12px rgba(255, 215, 0, 0.8);
       transform: scale(1.03);
+    }
+    .ladder-step.completed {
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.08);
+      border-left: 2px solid #10b981;
     }
 
     /* Side Cards */
@@ -713,25 +739,15 @@
       </div>
     </div>
 
-    <!-- Money Ladder Sidebar (Who Wants to Be a Millionaire) -->
+    <!-- Points Ladder Sidebar -->
     <aside class="ladder-panel">
-      <div class="ladder-title" data-i18n="ladder_title">💰 VOITTOTAULUKKO</div>
+      <div class="ladder-title" data-i18n="ladder_title">🎯 PISTETAULUKKO</div>
+      <div class="ladder-score-box">
+        <div class="ladder-score-lbl" data-i18n="my_points_lbl">Omat pisteet:</div>
+        <div class="ladder-score-val" id="my-score-display">0 p</div>
+      </div>
       <div class="ladder-list" id="ladder-list">
-        <div class="ladder-step top-prize" data-q="15"><span>15</span> <span>1 000 000 €</span></div>
-        <div class="ladder-step" data-q="14"><span>14</span> <span>500 000 €</span></div>
-        <div class="ladder-step" data-q="13"><span>13</span> <span>250 000 €</span></div>
-        <div class="ladder-step" data-q="12"><span>12</span> <span>125 000 €</span></div>
-        <div class="ladder-step" data-q="11"><span>11</span> <span>64 000 €</span></div>
-        <div class="ladder-step milestone" data-q="10"><span>10</span> <span>32 000 € ♦</span></div>
-        <div class="ladder-step" data-q="9"><span>9</span> <span>16 000 €</span></div>
-        <div class="ladder-step" data-q="8"><span>8</span> <span>8 000 €</span></div>
-        <div class="ladder-step" data-q="7"><span>7</span> <span>4 000 €</span></div>
-        <div class="ladder-step" data-q="6"><span>6</span> <span>2 000 €</span></div>
-        <div class="ladder-step milestone" data-q="5"><span>5</span> <span>1 000 € ♦</span></div>
-        <div class="ladder-step" data-q="4"><span>4</span> <span>500 €</span></div>
-        <div class="ladder-step" data-q="3"><span>3</span> <span>300 €</span></div>
-        <div class="ladder-step" data-q="2"><span>2</span> <span>200 €</span></div>
-        <div class="ladder-step" data-q="1"><span>1</span> <span>100 €</span></div>
+        <!-- Rendered dynamically -->
       </div>
     </aside>
   </main>
@@ -743,12 +759,13 @@
 
       <div class="form-group">
         <label data-i18n="label_twitch_channel">Twitch-kanava:</label>
-        <input type="text" id="cfg-twitch" placeholder="esim. omaquu tai shroud" />
+        <input type="text" id="cfg-twitch" placeholder="esim. omaquu tai kanavan nimi" />
       </div>
 
       <div class="form-group">
         <label data-i18n="label_kick_channel">Kick-kanava (tai chatroom ID):</label>
-        <input type="text" id="cfg-kick" placeholder="esim. samppapappa tai 123456" />
+        <input type="text" id="cfg-kick" placeholder="esim. omaquu tai 605983" />
+        <small style="color:#9ca3af;font-size:0.75rem;margin-top:3px;display:block;">Kanavanimi (esim. omaquu) tai numeerinen chatroom ID.</small>
       </div>
 
       <div class="form-group">
@@ -806,6 +823,8 @@
       const next = window.i18n.lang === 'fi' ? 'en' : 'fi';
       window.i18n.setLanguage(next);
       window.audioManager?.unlock();
+      renderLadder(currentTotalQuestions, currentQuestionNum);
+      updateUserScore(userScore);
     }
 
     // -------------------------------------------------------------------------
@@ -904,17 +923,9 @@
     // Voting Logic
     // -------------------------------------------------------------------------
     function vote(letter) {
-      if (gamePhase !== 'voting') return;
+      if (gamePhase !== 'voting' && gamePhase !== 'host_turn') return;
       if (myVote) return;
       myVote = letter;
-
-      if (isBackendConnected) {
-        send({ type: 'vote', answer: letter });
-      } else {
-        // Register vote with standalone engine
-        const name = myUsername || (window.i18n.lang === 'fi' ? 'Pelaaja' : 'Player');
-        window.standaloneEngine.handleVote(name, letter, 'guest');
-      }
 
       window.audioManager.unlock();
 
@@ -922,6 +933,25 @@
         const btn = document.getElementById('opt-' + l);
         if (btn) btn.classList.toggle('voted', l === letter);
       });
+
+      const res = document.getElementById('result-message');
+      if (res) {
+        res.innerHTML = `<span style="color:#ffd700;font-size:1.15rem;">🔒 ${window.i18n.t('voted_locked')}</span>`;
+      }
+
+      if (isBackendConnected) {
+        send({ type: 'vote', answer: letter });
+        send({ type: 'host_answer', answer: letter });
+        fetch('api/game/answer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ answer: letter })
+        }).catch(() => {});
+      } else {
+        const name = myUsername || (window.i18n.lang === 'fi' ? 'Pelaaja' : 'Player');
+        window.standaloneEngine.handleVote(name, letter, 'guest');
+        window.standaloneEngine.lockInAnswer(letter);
+      }
     }
 
     // Keyboard shortcuts A, B, C, D
@@ -1015,10 +1045,17 @@
       updateLadder(state.questionNumber);
     }
 
+    let currentTotalQuestions = 10;
+    let currentQuestionPoints = 100;
+    let currentQuestionNum = 1;
+
     function onQuestion(msg) {
       myVote = null;
       gamePhase = 'voting';
       maxTime = msg.timeLeft;
+      currentTotalQuestions = msg.totalQuestions || 10;
+      currentQuestionNum = msg.questionNumber || 1;
+      currentQuestionPoints = msg.questionPoints || 100;
 
       // Start suspense soundtrack & play dramatic question gong!
       window.audioManager.playSuspenseMusic();
@@ -1027,7 +1064,7 @@
       showQuestion(msg.question, [], msg.questionNumber, msg.totalQuestions);
       onTimer(msg.timeLeft);
       updatePhaseLabel('voting');
-      updateLadder(msg.questionNumber);
+      renderLadder(msg.totalQuestions, msg.questionNumber);
 
       const res = document.getElementById('result-message');
       res.textContent = '';
@@ -1102,24 +1139,22 @@
       const res = document.getElementById('result-message');
       if (myVote) {
         if (myVote === msg.correct) {
-          res.textContent = window.i18n.t('result_correct');
-          res.style.color = '#10b981';
-          userScore += 500;
+          const earned = msg.questionPoints || currentQuestionPoints || 250;
+          userScore += earned;
           userStreak += 1;
+          updateUserScore(userScore);
+          res.innerHTML = `<span style="color:#10b981;">🌟 ${window.i18n.t('result_correct')} (+${earned} ${window.i18n.lang === 'en' ? 'pts' : 'p'})</span>`;
           window.audioManager.playCorrectSound();
         } else {
-          res.textContent = `${window.i18n.t('result_wrong')} ${msg.correct}`;
-          res.style.color = '#ef4444';
+          res.innerHTML = `<span style="color:#ef4444;">❌ ${window.i18n.t('result_wrong')} ${msg.correct}</span>`;
           userStreak = 1;
           const wrongBtn = document.getElementById('opt-' + myVote);
           if (wrongBtn) wrongBtn.classList.add('wrong');
           window.audioManager.playWrongSound();
         }
-        document.getElementById('led-score').textContent = String(userScore).padStart(5, '0');
         document.getElementById('led-streak').textContent = `x${userStreak}`;
       } else {
-        res.textContent = `${window.i18n.t('result_timeout')} ${msg.correct}`;
-        res.style.color = '#ffd700';
+        res.innerHTML = `<span style="color:#ffd700;">${window.i18n.t('result_timeout')} ${msg.correct}</span>`;
       }
       updateVoteBars(msg.votes);
     }
@@ -1246,12 +1281,55 @@
       }
     }
 
+    function getPointsTable(total) {
+      if (total === 5) return [200, 500, 1000, 1800, 3000];
+      if (total === 15) return [100, 200, 300, 450, 650, 900, 1300, 1800, 2500, 3500, 5000, 6500, 8000, 10000, 15000];
+      return [100, 200, 300, 500, 800, 1200, 1800, 2500, 3500, 5000];
+    }
+
+    function renderLadder(totalQuestions, activeQuestionNum) {
+      const list = document.getElementById('ladder-list');
+      if (!list) return;
+      const total = totalQuestions || currentTotalQuestions || 10;
+      const pts = getPointsTable(total);
+      const isEn = window.i18n.lang === 'en';
+      const suffix = isEn ? 'pts' : 'p';
+      let html = '';
+
+      for (let q = pts.length; q >= 1; q--) {
+        const pointVal = pts[q - 1];
+        const isMilestone = (q === pts.length) || (q === Math.round(pts.length / 2));
+        const isTop = q === pts.length;
+        const isActive = q === activeQuestionNum;
+        const isCompleted = q < activeQuestionNum;
+
+        let cls = 'ladder-step';
+        if (isTop) cls += ' top-prize';
+        else if (isMilestone) cls += ' milestone';
+        if (isActive) cls += ' active';
+        if (isCompleted) cls += ' completed';
+
+        const checkMark = isCompleted ? '✓ ' : '';
+        html += `
+          <div class="${cls}" data-q="${q}">
+            <span>${checkMark}#${q}</span>
+            <span>+${pointVal.toLocaleString('fi')} ${suffix}</span>
+          </div>
+        `;
+      }
+      list.innerHTML = html;
+    }
+
     function updateLadder(questionNumber) {
-      const steps = document.querySelectorAll('.ladder-step');
-      steps.forEach(st => {
-        const q = parseInt(st.getAttribute('data-q'));
-        st.classList.toggle('active', q === questionNumber);
-      });
+      renderLadder(currentTotalQuestions, questionNumber);
+    }
+
+    function updateUserScore(score) {
+      userScore = score;
+      const el = document.getElementById('my-score-display');
+      if (el) el.textContent = `${userScore.toLocaleString('fi')} ${window.i18n.lang === 'en' ? 'pts' : 'p'}`;
+      const led = document.getElementById('led-score');
+      if (led) led.textContent = String(userScore).padStart(5, '0');
     }
 
     function updatePhaseLabel(phase) {
@@ -1291,8 +1369,21 @@
       const tw = document.getElementById('cfg-twitch').value.trim();
       const kc = document.getElementById('cfg-kick').value.trim();
 
-      if (tw) window.standaloneEngine.connectTwitch(tw);
-      if (kc) window.standaloneEngine.connectKick(kc);
+      if (tw) {
+        localStorage.setItem('mp_twitch_channel', tw);
+        window.standaloneEngine.connectTwitch(tw);
+        if (isBackendConnected && ws && ws.readyState === 1) {
+          ws.send(JSON.stringify({ type: 'chat_connect', platform: 'twitch', channel: tw }));
+        }
+      }
+
+      if (kc) {
+        localStorage.setItem('mp_kick_channel', kc);
+        window.standaloneEngine.connectKick(kc);
+        if (isBackendConnected && ws && ws.readyState === 1) {
+          ws.send(JSON.stringify({ type: 'chat_connect', platform: 'kick', channel: kc }));
+        }
+      }
 
       closeSettingsModal();
     }
@@ -1308,6 +1399,8 @@
         document.getElementById('player-indicator').textContent = `${window.i18n.t('player_prefix')} ${myUsername}`;
       }
 
+      renderLadder(10, 1);
+      updateUserScore(0);
       initNetwork();
     });
   </script>

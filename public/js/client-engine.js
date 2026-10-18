@@ -64,30 +64,36 @@ class StandaloneGameEngine {
         ws.send('NICK justinfan' + Math.floor(Math.random() * 80000 + 1000));
         ws.send(`JOIN #${this.twitchChannel}`);
         console.log(`[Twitch] Connected and joined #${this.twitchChannel}`);
-        this.emitChat('System', `Yhdistetty Twitch-chattiin (#${this.twitchChannel})`, 'twitch');
+        this.emitChat('System', `✅ Yhdistetty Twitch-chattiin (#${this.twitchChannel})! Äänet luetaan.`, 'twitch');
       };
 
       ws.onmessage = (event) => {
-        const line = event.data.trim();
-        if (line.startsWith('PING')) {
-          ws.send('PONG :tmi.twitch.tv');
-          return;
-        }
+        const raw = event.data || '';
+        const lines = raw.split(/\r?\n/);
 
-        const match = line.match(/^(?:@[^ ]+ )?:([^!]+)![^ ]+ PRIVMSG [^ ]+ :(.*)$/);
-        if (match) {
-          const tagsStr = line.startsWith('@') ? line.split(' ')[0].slice(1) : '';
-          const tagMap = {};
-          tagsStr.split(';').forEach(t => {
-            const [k, v] = t.split('=');
-            if (k) tagMap[k] = v || '';
-          });
+        for (const line of lines) {
+          if (!line.trim()) continue;
 
-          const username = tagMap['display-name'] || match[1];
-          const content = match[2];
+          if (line.startsWith('PING')) {
+            ws.send('PONG :tmi.twitch.tv');
+            continue;
+          }
 
-          this.emitChat(username, content, 'twitch');
-          this.handleVote(username, content, 'twitch');
+          const match = line.match(/^(?:@[^ ]+ )?:([^!]+)![^ ]+ PRIVMSG [^ ]+ :(.*)$/);
+          if (match) {
+            const tagsStr = line.startsWith('@') ? line.split(' ')[0].slice(1) : '';
+            const tagMap = {};
+            tagsStr.split(';').forEach(t => {
+              const [k, v] = t.split('=');
+              if (k) tagMap[k] = v || '';
+            });
+
+            const username = tagMap['display-name'] || match[1];
+            const content = match[2];
+
+            this.emitChat(username, content, 'twitch');
+            this.handleVote(username, content, 'twitch');
+          }
         }
       };
 
@@ -102,7 +108,7 @@ class StandaloneGameEngine {
   // ---------------------------------------------------------------------------
   // Direct Kick Pusher WebSocket (Client-side)
   // ---------------------------------------------------------------------------
-  connectKick(chatroomIdOrSlug) {
+  async connectKick(chatroomIdOrSlug) {
     if (!chatroomIdOrSlug) return;
     this.kickChannel = chatroomIdOrSlug.trim();
     localStorage.setItem('mp_kick_channel', this.kickChannel);
@@ -112,25 +118,36 @@ class StandaloneGameEngine {
       this.kickWs = null;
     }
 
-    // If numeric chatroomId, subscribe directly.
+    // Resolve chatroomId (support username like omaquu or numeric chatroom ID)
     let chatroomId = this.kickChannel;
-    if (!/^\d+$/.test(chatroomId)) {
-      // In standalone client mode, inform user if channel is not numeric
-      console.log('[Kick] If connecting from browser, numeric chatroom ID is recommended.');
+    const slugLower = this.kickChannel.toLowerCase().replace(/^https?:\/\/(www\.)?kick\.com\//i, '').replace(/\/.*$/, '').trim();
+
+    if (slugLower === 'omaquu') {
+      chatroomId = '605983';
+    } else if (!/^\d+$/.test(chatroomId)) {
+      // Try resolving via backend API if available
+      try {
+        const r = await fetch(`api/kick-chatroom/${encodeURIComponent(slugLower)}`);
+        if (r.ok) {
+          const d = await r.json();
+          if (d?.chatroomId) chatroomId = String(d.chatroomId);
+        }
+      } catch {}
     }
 
     try {
+      console.log(`[Kick] Connecting to Pusher for chatroom ${chatroomId} (channel: ${this.kickChannel})...`);
       const pusherWsUrl = 'wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=7.6.0&flash=false';
       const ws = new WebSocket(pusherWsUrl);
       this.kickWs = ws;
 
       ws.onopen = () => {
-        console.log('[Kick] Connected to Pusher, subscribing...');
+        console.log(`[Kick] Connected to Pusher, subscribing to chatroom.${chatroomId}.v2...`);
         ws.send(JSON.stringify({
           event: 'pusher:subscribe',
           data: { auth: '', channel: `chatroom.${chatroomId}.v2` }
         }));
-        this.emitChat('System', `Yhdistetty Kick-chattiin (${chatroomId})`, 'kick');
+        this.emitChat('System', `Yhdistetään Kick-chattiin (kanava: ${this.kickChannel}, ID: ${chatroomId})...`, 'kick');
       };
 
       ws.onmessage = (event) => {
@@ -139,6 +156,12 @@ class StandaloneGameEngine {
 
         if (msg.event === 'pusher:ping') {
           ws.send(JSON.stringify({ event: 'pusher:pong', data: {} }));
+          return;
+        }
+
+        if (msg.event === 'pusher:subscription_succeeded') {
+          console.log('[Kick] Pusher subscription confirmed for chatroom', chatroomId);
+          this.emitChat('System', `✅ Kick-chatti yhdistetty onnistuneesti! Äänestä kirjoittamalla A, B, C tai D.`, 'kick');
           return;
         }
 
@@ -151,6 +174,10 @@ class StandaloneGameEngine {
           this.emitChat(username, content, 'kick');
           this.handleVote(username, content, 'kick');
         }
+      };
+
+      ws.onerror = (e) => {
+        console.warn('[Kick] Pusher WebSocket error:', e);
       };
     } catch (e) {
       console.warn('[Kick] Pusher connect error:', e.message);
@@ -232,6 +259,9 @@ class StandaloneGameEngine {
     this.eliminated = [];
     this.timeLeft = this.votingTime;
 
+    const ptsTable = this.getPointsTable(this.questions.length);
+    const questionPoints = ptsTable[this.questionIndex - 1] || 100;
+
     // Send question event to UI
     window.dispatchEvent(new CustomEvent('engineMessage', {
       detail: {
@@ -239,6 +269,7 @@ class StandaloneGameEngine {
         question: this.currentQuestion,
         questionNumber: this.questionIndex,
         totalQuestions: this.questions.length,
+        questionPoints,
         timeLeft: this.timeLeft,
         votingOpen: true
       }
@@ -339,6 +370,26 @@ class StandaloneGameEngine {
     return true;
   }
 
+  getPointsTable(total) {
+    if (total === 5) return [200, 500, 1000, 1800, 3000];
+    if (total === 15) return [100, 200, 300, 450, 650, 900, 1300, 1800, 2500, 3500, 5000, 6500, 8000, 10000, 15000];
+    return [100, 200, 300, 500, 800, 1200, 1800, 2500, 3500, 5000];
+  }
+
+  // Immediately lock in answer and stop timer countdown
+  lockInAnswer(letter) {
+    if (this.phase !== 'voting' && this.phase !== 'host_turn') return;
+    this.clearTimer();
+    window.dispatchEvent(new CustomEvent('engineMessage', {
+      detail: { type: 'timer', timeLeft: 0 }
+    }));
+    setTimeout(() => {
+      if (this.active) {
+        this.revealAnswer(letter);
+      }
+    }, 1200);
+  }
+
   // ---------------------------------------------------------------------------
   // Answer Reveal & Scoring
   // ---------------------------------------------------------------------------
@@ -346,6 +397,8 @@ class StandaloneGameEngine {
     this.clearTimer();
     this.phase = 'revealing';
     const correct = this.currentQuestion.correct_answer;
+    const ptsTable = this.getPointsTable(this.questions.length);
+    const qPoints = ptsTable[this.questionIndex - 1] || 250;
 
     // Calculate scores for all voters
     for (const [user, ans] of Object.entries(this.voters)) {
@@ -354,7 +407,8 @@ class StandaloneGameEngine {
       p.total += 1;
       if (ans === correct) {
         p.correct += 1;
-        p.score += Math.round(250 * p.streak);
+        const earned = Math.round(qPoints * p.streak);
+        p.score += earned;
         p.streak = Math.min(5, p.streak + 0.5);
       } else {
         p.streak = 1;
