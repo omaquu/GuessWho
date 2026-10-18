@@ -3,11 +3,33 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tulostaulukko – Kuka haluaa miljonääriksi?</title>
+  <title data-i18n="nav_leaderboard">Tulostaulukko – Kuka haluaa miljonääriksi?</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .top-btn {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+    .top-btn:hover {
+      background: rgba(245, 197, 24, 0.2);
+      border-color: #ffd700;
+      color: #ffd700;
+    }
+  </style>
 </head>
 <body class="lb-body">
 
@@ -20,24 +42,27 @@
   </div>
 
   <!-- Header -->
-  <header class="site-header">
-    <div class="header-title">
-      <span class="header-star">★</span>
-      <span>Miljonääri</span>
+  <header class="site-header" style="display:flex;justify-content:space-between;align-items:center;padding:14px 24px;">
+    <div class="header-title" style="display:flex;align-items:center;gap:8px;">
+      <span class="header-star" style="color:#ffd700;font-size:1.4rem;">★</span>
+      <span style="font-family:'Anton',sans-serif;font-size:1.3rem;letter-spacing:1px;color:#ffd700;" data-i18n="logo_title">Miljonääri</span>
     </div>
-    <nav class="header-nav">
-      <a class="nav-link" href="index.html">← Peliin</a>
+    <nav class="header-nav" style="display:flex;gap:10px;align-items:center;">
+      <button type="button" class="top-btn" id="btn-lang-toggle" onclick="toggleLanguage()" title="Vaihda kieli / Switch Language">
+        <span style="font-size:1.1rem">🇫🇮</span> <strong>FI</strong> / EN
+      </button>
+      <a class="top-btn" href="index.html">← <span id="lbl-back">Peliin</span></a>
     </nav>
   </header>
 
   <main class="lb-main">
-    <h1 class="lb-page-title">Tulostaulukko</h1>
+    <h1 class="lb-page-title" id="lb-title">Tulostaulukko</h1>
 
     <!-- Filter tabs -->
     <div class="lb-tabs" role="tablist">
-      <button class="lb-tab active" data-period="all" role="tab" aria-selected="true">Kaikki ajat</button>
-      <button class="lb-tab" data-period="week" role="tab" aria-selected="false">Tämä viikko</button>
-      <button class="lb-tab" data-period="month" role="tab" aria-selected="false">Tämä kuukausi</button>
+      <button class="lb-tab active" data-period="all" role="tab" aria-selected="true" id="tab-all">Kaikki ajat</button>
+      <button class="lb-tab" data-period="week" role="tab" aria-selected="false" id="tab-week">Tämä viikko</button>
+      <button class="lb-tab" data-period="month" role="tab" aria-selected="false" id="tab-month">Tämä kuukausi</button>
     </div>
 
     <!-- Auto-refresh indicator -->
@@ -49,7 +74,7 @@
     <!-- Loading state -->
     <div class="lb-loading hidden" id="lb-loading">
       <div class="waiting-spinner"></div>
-      <p>Ladataan tuloksia...</p>
+      <p id="lbl-loading">Ladataan tuloksia...</p>
     </div>
 
     <!-- Error state -->
@@ -69,11 +94,11 @@
         <thead>
           <tr>
             <th class="th-rank">#</th>
-            <th class="th-player">Pelaaja</th>
-            <th class="th-platform">Alusta</th>
-            <th class="th-score">Pisteet</th>
-            <th class="th-games">Pelejä</th>
-            <th class="th-accuracy">Tarkkuus</th>
+            <th class="th-player" id="th-player">Pelaaja</th>
+            <th class="th-platform" id="th-platform">Alusta</th>
+            <th class="th-score" id="th-score">Pisteet</th>
+            <th class="th-games" id="th-games">Pelejä</th>
+            <th class="th-accuracy" id="th-accuracy">Tarkkuus</th>
           </tr>
         </thead>
         <tbody id="lb-tbody">
@@ -85,12 +110,46 @@
     <!-- Empty state -->
     <div class="lb-empty hidden" id="lb-empty">
       <div class="empty-icon" aria-hidden="true">🏆</div>
-      <p>Tulostaulukko on tyhjä. Pelaa ensimmäinen peli!</p>
-      <a class="btn btn-primary" href="index.html">Aloita peli</a>
+      <p id="lbl-empty">Tulostaulukko on tyhjä. Pelaa ensimmäinen peli!</p>
+      <a class="btn btn-primary" href="index.html" id="btn-start-first">Aloita peli</a>
     </div>
-
   </main>
 
+  <script src="js/i18n.js"></script>
   <script src="js/leaderboard.js"></script>
+  <script>
+    function updateLeaderboardTexts() {
+      const isFi = window.i18n.lang === 'fi';
+      document.getElementById('lb-title').textContent = isFi ? 'Tulostaulukko' : 'Leaderboard';
+      document.getElementById('lbl-back').textContent = isFi ? 'Peliin' : 'To Game';
+      document.getElementById('tab-all').textContent = isFi ? 'Kaikki ajat' : 'All Time';
+      document.getElementById('tab-week').textContent = isFi ? 'Tämä viikko' : 'This Week';
+      document.getElementById('tab-month').textContent = isFi ? 'Tämä kuukausi' : 'This Month';
+      document.getElementById('th-player').textContent = isFi ? 'Pelaaja' : 'Player';
+      document.getElementById('th-platform').textContent = isFi ? 'Alusta' : 'Platform';
+      document.getElementById('th-score').textContent = isFi ? 'Pisteet' : 'Score';
+      document.getElementById('th-games').textContent = isFi ? 'Pelejä' : 'Games';
+      document.getElementById('th-accuracy').textContent = isFi ? 'Tarkkuus' : 'Accuracy';
+      document.getElementById('lbl-empty').textContent = isFi ? 'Tulostaulukko on tyhjä. Pelaa ensimmäinen peli!' : 'Leaderboard is empty. Play the first game!';
+      document.getElementById('btn-start-first').textContent = isFi ? 'Aloita peli' : 'Start Game';
+
+      const langBtn = document.getElementById('btn-lang-toggle');
+      if (langBtn) {
+        langBtn.innerHTML = isFi
+          ? '<span style="font-size:1.1rem">🇫🇮</span> <strong>FI</strong> / EN'
+          : '<span style="font-size:1.1rem">🇬🇧</span> FI / <strong>EN</strong>';
+      }
+    }
+
+    function toggleLanguage() {
+      const next = window.i18n.lang === 'fi' ? 'en' : 'fi';
+      window.i18n.setLanguage(next);
+      updateLeaderboardTexts();
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      updateLeaderboardTexts();
+    });
+  </script>
 </body>
 </html>

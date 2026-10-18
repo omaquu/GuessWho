@@ -1,20 +1,35 @@
-# 🎯 Kuka haluaa miljonääriksi? — Live Kick & Twitch Trivia
+# 🎯 Kuka haluaa miljonääriksi? / Who Wants to Be a Millionaire?
+### 🌟 Live Kick & Twitch Chat Trivia Game
 
-Interaktiivinen, suomalainen "Haluatko miljonääriksi?" -tyylinen tietovisapeli livestriimeihin. Peli tukee reaaliaikaista **Kick-** ja **Twitch-chat** -äänestystä, leaderboardia, aitoja oljenkorsia, jännittävää TV-studiomusiikkia ja moninpeliä.
+> **🌐 Live Demo (GitHub Pages):** [https://omaquu.github.io/GuessWho/](https://omaquu.github.io/GuessWho/)  
+> **🏆 Tulostaulukko / Leaderboard:** [https://omaquu.github.io/GuessWho/leaderboard.html](https://omaquu.github.io/GuessWho/leaderboard.html)
+
+Interaktiivinen ja moderni TV-tietovisapeli livestriimeihin ja selaimeen. Peli tukee reaaliaikaista **Kick-** ja **Twitch-chat** -äänestystä, leaderboardia, aitoja oljenkorsia, jännittävää TV-studiomusiikkia ja moninpeliä.
+
+Toimii suoraan **GitHub Pagesissa ilman palvelinta** (Standalone Mode) tai **omalla Node.js/Docker-palvelimella**.
 
 ---
 
-## 🌟 Ominaisuudet
+## 🌟 Ominaisuudet / Features
 
-- 📺 **TV-studioteema**: Tumma studiovalaistus, liikkuvat valokeilat, Anton & Rubik -fontit, neon-LED-paneelit ja klassiset timanttivaihtoehdot.
+- 🌐 **Kaksikielinen / Bilingual (FI / EN)**:
+  - Vaihda kieli yläpalkista milloin tahansa (🇫🇮 Suomi / 🇬🇧 English).
+  - Kaikki tekstit, kysymykset ja selitteet kääntyvät saumattomasti.
+  - Englanninkieliset kysymykset voidaan hakea suoraan myös **Open Trivia DB** -rajapinnasta!
+- 📺 **TV-studioteema**:
+  - Tumma ja näyttävä visualisointi liikkuvilla valokeiloilla.
+  - Anton & Rubik -fontit, neon-LED-paneelit ja klassiset timanttivaihtoehdot.
+  - Klassinen 15-portainen voittotikas (Money Ladder 100 € – 1 000 000 €).
 - 💬 **Kick- & Twitch-chatti-integraatio**:
   - Chattilaiset äänestävät suoraan kirjoittamalla chattiin `A`, `B`, `C` tai `D` (tai `!A`, `!B`, `!C`, `!D`).
-  - Tukee Kick-kanavanimen automaattista hakua ilman manuaalisia numerotunnuksia.
-  - Twitch IRC -yhteys toimii suoraan ja luotettavasti.
+  - Tukee Kick-kanavanimen automaattista hakua ilman manuaalisia tunnuksia.
+  - Twitch IRC -yhteys toimii anonyymisti ja viiveettömästi.
+  - Toimii jopa suoraan selaimesta käsin (GitHub Pages) WebSocket-yhteyksillä!
 - 👥 **Moninpeli & Leaderboard**:
   - Chattilaiset kilpailevat keskenään ja keräävät pisteitä.
   - Reaaliaikainen tulostaulukko pelin aikana sekä pysyvä globaali tulostaulukko (Kaikki ajat, Tämä viikko, Tämä kuukausi).
   - Palkintopallinäkymä (Top 3 kulta, hopea, pronssi) ja tarkkuusprosentit.
+  - GitHub Pagesissa tulokset tallentuvat selaimeen (`localStorage`), Node.js-tilassa SQLite-tietokantaan.
 - 💡 **4 Aitoa Oljenkortta**:
   1. ❌ **50:50 (Poista 2 väärää vastausta)**: Jättää jäljelle oikean ja yhden satunnaisen väärän vaihtoehdon.
   2. ⏱️ **Lisää aikaa (+30s)**: Antaa lisäaikaa miettiä tai äänestää.
@@ -24,47 +39,55 @@ Interaktiivinen, suomalainen "Haluatko miljonääriksi?" -tyylinen tietovisapeli
   - "Haluatko miljonääriksi" -tyylinen matala analoginen bassodrone, sydämenlyönnit (60 BPM), sekuntikellon tikitys ja nousevat jännityssoinnut.
   - Ääniefektit kysymyksen aloitukselle (gong), oikealle vastaukselle (fanfaari), väärälle vastaukselle (dramaattinen pudotus) ja oljenkorsille.
   - Sisäänrakennettu äänenvoimakkuuden säädin ja mykistyspainike.
-- 💰 **Voittotaulukko (Money Ladder)**:
-  - 15 tasoa (100 € -> 1 000 000 €) turvatasoilla (1 000 € ja 32 000 €).
-- ⚙️ **Monipuolinen Isännän / Admin-ohjauspaneeli**:
-  - Aloita ja lopeta pelit yhdellä klikkauksella.
-  - Säädettävä äänestysaika (esim. 30s chatille ennen kuin isäntä vastaa tai käyttää oljenkorsia).
-  - Kysymyspankin hallinta (lisää, muokkaa ja poista kysymyksiä suoraan selaimessa).
-  - Open Trivia DB -tuonti ja JSON-vienti.
+- ⚙️ **Monipuoliset asetukset**:
+  - Säädettävä kysymysmäärä ja äänestysaika (esim. 30s chatille ennen vastausta).
+  - Pelitilat: Yleistieto, Striimikulttuuri, Open Trivia DB.
 
 ---
 
-## 🚀 Asennus ja käynnistys
+## 🚀 Käyttöönotto GitHub Pagesissa (Ilmainen & nopea)
 
-### Vaihtoehto A: Node.js (Suositeltu paikalliseen ajoon)
+Tämä repositorio on valmis toimimaan **suoraan GitHub Pagesissa**:
 
-Vaatimukset: **Node.js 22+** (tai 24)
-
-1. Asenna riippuvuudet:
-   ```bash
-   npm install
-   ```
-
-2. Generoi taustamusiikki (jos tarpeen):
-   ```bash
-   node scripts/generate_music.js
-   ```
-
-3. Käynnistä palvelin:
-   ```bash
-   npm start
-   ```
-
-4. Avaa selaimessa:
-   - 🎮 **Pelisivu**: [http://localhost:3000](http://localhost:3000)
-   - ⚙️ **Isännän hallintapaneeli**: [http://localhost:3000/admin](http://localhost:3000/admin)
-   - 🏆 **Tulostaulukko**: [http://localhost:3000/leaderboard](http://localhost:3000/leaderboard)
+1. Avaa GitHubissa reposti asetukset: `https://github.com/omaquu/GuessWho/settings/pages`
+2. Valitse **Build and deployment**:
+   - **Source**: `Deploy from a branch`
+   - **Branch**: `main`, kansioksi `/ (root)`
+3. Klikkaa **Save**.
+4. Sivu on hetken kuluttua auki osoitteessa:  
+   👉 **`https://omaquu.github.io/GuessWho/`**
 
 ---
 
-### Vaihtoehto B: Docker / Proxmox CT
+## 💻 Paikallinen ajo & Palvelinasennus (Node.js)
 
-Käynnistä peli taustalle yhdellä komennolla:
+Jos haluat käyttää omaa palvelinta (esim. Proxmox, VPS tai oma tietokone):
+
+### Vaatimukset:
+- **Node.js 22+** (tai 24)
+
+### 1. Asenna ja käynnistä:
+```bash
+# Asenna riippuvuudet
+npm install
+
+# Generoi taustamusiikki (jos tarpeen)
+node scripts/generate_music.js
+
+# Käynnistä palvelin
+npm start
+```
+
+### 2. Avaa selaimessa:
+- 🎮 **Pelisivu**: [http://localhost:3000](http://localhost:3000)
+- ⚙️ **Isännän hallintapaneeli**: [http://localhost:3000/admin.html](http://localhost:3000/admin.html)
+- 🏆 **Tulostaulukko**: [http://localhost:3000/leaderboard.html](http://localhost:3000/leaderboard.html)
+
+---
+
+## 🐳 Docker / Proxmox CT
+
+Käynnistä koko palvelu taustalle yhdellä komennolla:
 
 ```bash
 docker compose up -d --build
@@ -76,21 +99,25 @@ Peli käynnistyy porttiin `3000`.
 
 ## 🎮 Pelin kulku livestriimissä
 
-1. Avaa hallintapaneeli `/admin` toisessa välilehdessä tai toisella näytöllä.
-2. Syötä Kick- tai Twitch-kanavasi nimi ja klikkaa **Yhdistä**.
-3. Valitse pelitila (*Yleistieto* tai *Striimikulttuuri*) ja kysymysten määrä.
-4. Klikkaa **Aloita peli**.
-5. Kysymys ilmestyy ruutuun:
-   - Chattilaisilla on ensimmäiset 30 sekuntia aikaa äänestää (A/B/C/D).
-   - Äänestysajan päätyttyä vuoro siirtyy isännälle.
-   - Isäntä voi tarvittaessa käyttää oljenkorsia (esim. *Kysy yleisöltä*, jolloin chatin äänestysjakauma heijastuu ruudulle).
-   - Oikean vastauksen paljastuttua oikein arvanneet chattilaiset saavat pisteitä tulostaulukkoon!
+1. Avaa peli osoitteessa `https://omaquu.github.io/GuessWho/` (tai oma palvelimesi).
+2. Avaa **Asetukset ⚙️** -nappi ylhäältä ja syötä Twitch- ja/tai Kick-kanavasi nimi.
+3. Valitse kieli (FI/EN), kysymysten määrä ja äänestysaika.
+4. Klikkaa **Aloita peli 🎮**:
+   - Chattilaisilla on asetettu aika (esim. 30s) äänestää kirjoittamalla chattiin A, B, C tai D.
+   - Äänet päivittyvät ruudulle reaaliajassa.
+   - Isäntä tai pelaaja voi käyttää oljenkorsia (50:50, lisäaika, vihje, kysy yleisöltä).
+   - Oikea vastaus paljastetaan dramaattisen animaation ja ääniefektien kera!
+   - Chattilaisten pisteet päivittyvät leaderboardille.
 
 ---
 
-## 🛠️ Teknologiat
+## 🛠️ Tekninen arkkitehtuuri
 
-- **Backend**: Node.js, Express, WebSocket (`ws`)
-- **Tietokanta**: SQLite (`node:sqlite` - sisäänrakennettu, ei vaadi ulkoisia C++ kääntäjiä)
-- **Frontend**: HTML5, Moderni CSS3 (Grid & Flexbox), Vanilla JS, Web Audio API
-- **Live Chatti**: Kick Pusher WebSocket API & Twitch IRC WebSocket
+- **Monikielisyys**: `js/i18n.js` — dynaaminen kääntäjä ja kielitiedostot
+- **Äänijärjestelmä**: `js/audio.js` + `assets/suspense.wav` — Web Audio API synteesi & jännitysraita
+- **Kysymyspankki**: `js/questions.js` — Suomalaiset triviakysymykset + Open Trivia DB API -integraatio
+- **Pelimoottori**:
+  - `js/client-engine.js` — Täysin itsenäinen selainmoottori GitHub Pagesille
+  - `server.js` — WebSocket + REST API -palvelin omalle hostaukselle
+- **Tietokanta**: SQLite (`node:sqlite` — sisäänrakennettu, ei C++ kääntäjäongelmia)
+- **Chat-protokollat**: Kick Pusher WS & Twitch IRC WebSocket

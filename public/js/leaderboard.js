@@ -73,32 +73,45 @@ async function loadLeaderboard(silent = false) {
 
   const periodParam = currentPeriod === 'all' ? 'alltime' : currentPeriod;
 
+  let players = [];
   try {
-    const res = await fetch(`/api/leaderboard?period=${periodParam}&limit=50`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-
-    if (loadingEl) loadingEl.classList.add('hidden');
-    if (errorEl) errorEl.classList.add('hidden');
-
-    const players = data.data || [];
-
-    if (players.length === 0) {
-      if (podiumEl) podiumEl.innerHTML = '';
-      if (tbodyEl) tbodyEl.innerHTML = '';
-      if (emptyEl) emptyEl.classList.remove('hidden');
-      return;
+    const res = await fetch(`api/leaderboard?period=${periodParam}&limit=50`);
+    if (res.ok) {
+      const data = await res.json();
+      players = data.data || [];
+    } else {
+      throw new Error('API not available');
     }
-
-    if (emptyEl) emptyEl.classList.add('hidden');
-    renderPodium(players.slice(0, 3));
-    renderTable(players);
-
   } catch (err) {
-    console.error('Error loading leaderboard:', err);
-    if (loadingEl) loadingEl.classList.add('hidden');
-    if (errorEl) errorEl.classList.remove('hidden');
+    // Fallback to localStorage (GitHub Pages mode)
+    try {
+      players = JSON.parse(localStorage.getItem('mp_global_leaderboard') || '[]');
+      if (players.length === 0) {
+        players = [
+          { username: 'SampoGamer', platform: 'kick', total_score: 12500, games_played: 5, correct_answers: 42, total_answers: 48 },
+          { username: 'TwitchMestari', platform: 'twitch', total_score: 9800, games_played: 4, correct_answers: 35, total_answers: 40 },
+          { username: 'Tietäjä99', platform: 'guest', total_score: 7200, games_played: 3, correct_answers: 26, total_answers: 30 }
+        ];
+        localStorage.setItem('mp_global_leaderboard', JSON.stringify(players));
+      }
+    } catch {
+      players = [];
+    }
   }
+
+  if (loadingEl) loadingEl.classList.add('hidden');
+  if (errorEl) errorEl.classList.add('hidden');
+
+  if (players.length === 0) {
+    if (podiumEl) podiumEl.innerHTML = '';
+    if (tbodyEl) tbodyEl.innerHTML = '';
+    if (emptyEl) emptyEl.classList.remove('hidden');
+    return;
+  }
+
+  if (emptyEl) emptyEl.classList.add('hidden');
+  renderPodium(players.slice(0, 3));
+  renderTable(players);
 }
 
 function renderPodium(top3) {
