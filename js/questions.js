@@ -1085,7 +1085,34 @@ async function fetchChannelQuotes(channel = 'omaquu', count = 10) {
     }
   } catch {}
 
-  // 2. Try static JSON files (works on GitHub Pages and local servers)
+  // 2. Try robotty Twitch recent-messages API (CORS-enabled public Twitch chat cache)
+  try {
+    const r = await fetch(`https://recent-messages.robotty.de/api/v2/recent-messages/${encodeURIComponent(normChannel)}`);
+    if (r.ok) {
+      const data = await r.json();
+      if (data && Array.isArray(data.messages) && data.messages.length > 0) {
+        const parsed = [];
+        for (const line of data.messages) {
+          const m = line.match(/^(?:@[^ ]+ )?:([^!]+)![^ ]+ PRIVMSG [^ ]+ :(.*)$/);
+          if (m) {
+            const tags = line.startsWith('@') ? line.split(' ')[0] : '';
+            const dnMatch = tags.match(/display-name=([^;]+)/);
+            const author = dnMatch ? dnMatch[1] : m[1];
+            parsed.push({ author, text: m[2], displayName: author, login: m[1] });
+          }
+        }
+        if (parsed.length >= 4) {
+          console.log(`[Quotes] Loaded ${parsed.length} recent Twitch chat messages via robotty for #${normChannel}`);
+          const questions = parseAndGenerateQuotes({ messages: parsed }, normChannel, count);
+          if (questions.length > 0) return questions;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[Quotes] Robotty recent messages fetch failed:', e.message);
+  }
+
+  // 3. Try static JSON files (works on GitHub Pages and local servers)
   const pathsToTry = [
     `data/quotes_${normChannel}.json`,
     `data/quotes_omaquu.json`,

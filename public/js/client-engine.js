@@ -227,7 +227,7 @@ class StandaloneGameEngine {
     const count = config.count || 10;
     const mode = config.mode || 'chat_quotes';
     const channel = (config.channel || this.twitchChannel || localStorage.getItem('mp_twitch_channel') || 'omaquu').toLowerCase().replace('#', '').trim();
-    this.votingTime = config.votingTime || 30;
+    this.votingTime = config.votingTime || parseInt(localStorage.getItem('mp_voting_time')) || 30;
     this.hostTime = config.hostTime || 30;
 
     // Connect to Twitch IRC if not connected to this channel
@@ -260,6 +260,7 @@ class StandaloneGameEngine {
     this.currentQuestion = this.questions[this.questionIndex];
     this.questionIndex++;
     this.phase = 'voting';
+    this.pendingHostAnswer = null;
     this.votes = { A: 0, B: 0, C: 0, D: 0 };
     this.voters = {};
     this.eliminated = [];
@@ -297,6 +298,17 @@ class StandaloneGameEngine {
         state: this.getState()
       }
     }));
+
+    if (this.pendingHostAnswer) {
+      const ans = this.pendingHostAnswer;
+      this.pendingHostAnswer = null;
+      setTimeout(() => {
+        if (this.active && this.phase === 'host_turn') {
+          this.revealAnswer(ans);
+        }
+      }, 1500);
+      return;
+    }
 
     this.startTimer(this.hostTime, () => {
       // Host time expired -> Auto reveal
@@ -376,15 +388,22 @@ class StandaloneGameEngine {
     return true;
   }
 
-  getPointsTable(total) {
-    if (total === 5) return [200, 500, 1000, 1800, 3000];
-    if (total === 15) return [100, 200, 300, 450, 650, 900, 1300, 1800, 2500, 3500, 5000, 6500, 8000, 10000, 15000];
-    return [100, 200, 300, 500, 800, 1200, 1800, 2500, 3500, 5000];
+  getPointsTable(total = 10) {
+    const table = [];
+    for (let i = 0; i < total; i++) {
+      table.push(100 + i * 10);
+    }
+    return table;
   }
 
-  // Immediately lock in answer and stop timer countdown
+  // Lock in answer (if host answers during voting, wait until host phase; if during host phase, reveal promptly)
   lockInAnswer(letter) {
     if (this.phase !== 'voting' && this.phase !== 'host_turn') return;
+    if (this.phase === 'voting') {
+      this.pendingHostAnswer = letter;
+      // Do not end round early; let chat voters have their full turn
+      return;
+    }
     this.clearTimer();
     window.dispatchEvent(new CustomEvent('engineMessage', {
       detail: { type: 'timer', timeLeft: 0 }
@@ -403,21 +422,23 @@ class StandaloneGameEngine {
     this.clearTimer();
     this.phase = 'revealing';
     const correct = this.currentQuestion.correct_answer;
-    const ptsTable = this.getPointsTable(this.questions.length);
-    const qPoints = ptsTable[this.questionIndex - 1] || 250;
 
     // Calculate scores for all voters
+    // 1st correct in streak: 100p, 2nd: 110p, 3rd: 120p (+10p per consecutive correct).
+    // Wrong answer resets streak to 0, so next correct answer starts from 100p again.
     for (const [user, ans] of Object.entries(this.voters)) {
       const p = this.sessionScores[user];
       if (!p) continue;
       p.total += 1;
       if (ans === correct) {
         p.correct += 1;
-        const earned = Math.round(qPoints * p.streak);
+        p.streak = (p.streak || 0) + 1;
+        const earned = 100 + (p.streak - 1) * 10;
         p.score += earned;
-        p.streak = Math.min(5, p.streak + 0.5);
+        p.lastEarned = earned;
       } else {
-        p.streak = 1;
+        p.streak = 0;
+        p.lastEarned = 0;
       }
     }
 
@@ -440,10 +461,8 @@ class StandaloneGameEngine {
       detail: { type: 'leaderboard_update', top10 }
     }));
 
-    // Next question automatically after 5 seconds
-    setTimeout(() => {
-      if (this.active) this.nextQuestion();
-    }, 5500);
+    // Note: Does NOT automatically advance to the next question.
+    // The player or host clicks "Seuraava kysymys" (nextQuestion) to advance.
   }
 
   finishGame() {

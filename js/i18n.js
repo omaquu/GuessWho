@@ -59,9 +59,12 @@ const translations = {
     result_correct: '🌟 OIKEIN VASTATTU!',
     result_wrong: '❌ VÄÄRIN. Oikea vastaus oli:',
     result_timeout: 'Vastausaika päättyi! Oikea vastaus:',
+    btn_next_question: 'Seuraava kysymys ➡️',
 
     // Vote stats & chat
     vote_stats_title: '👥 Yleisön ja Chatin live-äänet',
+    votes_hidden_notice: '🔒 Äänet paljastetaan vastausajan päätyttyä (tai "Kysy yleisöltä" -oljenkorrella)',
+    ladder_streak_prefix: 'Putki',
     chat_panel_title: '💬 Chat-syöte (Kick & Twitch)',
     chat_empty: 'Odotetaan chatti-viestejä...',
     score_panel_title: '🏆 Tämän pelin kärki',
@@ -157,9 +160,12 @@ const translations = {
     result_correct: '🌟 CORRECT ANSWER!',
     result_wrong: '❌ WRONG. The correct answer was:',
     result_timeout: 'Time expired! Correct answer:',
+    btn_next_question: 'Next Question ➡️',
 
     // Vote stats & chat
     vote_stats_title: '👥 Audience & Chat Live Votes',
+    votes_hidden_notice: '🔒 Votes will be revealed after answer time ends (or via "Ask Audience")',
+    ladder_streak_prefix: 'Streak',
     chat_panel_title: '💬 Live Chat (Kick & Twitch)',
     chat_empty: 'Waiting for chat messages...',
     score_panel_title: '🏆 Current Game Top Players',

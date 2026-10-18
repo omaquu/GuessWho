@@ -200,12 +200,9 @@ const TIME_BONUS_PER_SEC = 10;
  * @param {number} streak     - current streak count BEFORE this answer
  */
 function calcScore(difficulty, timeLeft, streak) {
-  const base      = DIFFICULTY_POINTS[difficulty] || 100;
-  const timeBonus = Math.max(0, timeLeft) * TIME_BONUS_PER_SEC;
-  const raw       = base + timeBonus;
-  // Streak multiplier: ×1.5 for 3+ correct in a row
-  const mult      = streak >= 2 ? 1.5 : 1;
-  return Math.round(raw * mult);
+  // 1st correct in streak: 100p, each consecutive correct adds +10p (110p, 120p, etc.)
+  const s = Math.max(1, streak || 1);
+  return 100 + (s - 1) * 10;
 }
 
 // ---------------------------------------------------------------------------
@@ -228,6 +225,7 @@ function presentNextQuestion() {
   gameState.votes             = { A: 0, B: 0, C: 0, D: 0 };
   gameState.voters            = {};
   gameState.eliminatedAnswers = [];
+  gameState.pendingHostAnswer = null;
 
   broadcast({
     type:         'question',
@@ -263,6 +261,17 @@ function startHostPhase() {
   broadcastGameState();
   broadcast({ type: 'vote_update', votes: { ...gameState.votes }, totalVoters: Object.keys(gameState.voters).length });
 
+  if (gameState.pendingHostAnswer) {
+    const ans = gameState.pendingHostAnswer;
+    gameState.pendingHostAnswer = null;
+    setTimeout(() => {
+      if (gameState.active && gameState.phase === 'host_turn') {
+        revealAnswer(ans);
+      }
+    }, 1500);
+    return;
+  }
+
   startTimer(
     gameState.hostTimeSeconds,
     () => {},
@@ -291,22 +300,21 @@ function revealAnswer(hostAnswer) {
     const isCorrect = answer === correct;
     const pState    = gameState.sessionScores[username] || { score: 0, correct: 0, streak: 0, platform: 'guest', lastCorrect: false };
 
-    // Update streak
+    let earned = 0;
+    // Update streak: 1st correct in streak: 100p, 2nd: 110p, 3rd: 120p (+10p per consecutive correct).
+    // Wrong answer resets streak to 0, so next correct answer starts from 100p again.
     if (isCorrect) {
-      pState.streak++;
+      pState.streak = (pState.streak || 0) + 1;
       pState.correct++;
+      earned = 100 + (pState.streak - 1) * 10;
+      pState.score += earned;
+      pState.lastCorrect = true;
     } else {
       pState.streak = 0;
+      pState.lastCorrect = false;
     }
 
-    const earned = isCorrect
-      ? calcScore(q.difficulty, gameState.timeLeft, pState.streak - (isCorrect ? 1 : 0))
-      : 0;
-
-    pState.score        += earned;
-    pState.lastCorrect   = isCorrect;
     gameState.sessionScores[username] = pState;
-
     playerResults.push({ username, answer, isCorrect, earned, score: pState.score });
   }
 
@@ -325,12 +333,8 @@ function revealAnswer(hostAnswer) {
   // Top-10 leaderboard update
   broadcastLeaderboardUpdate();
 
-  // Advance after a short delay to let the UI show the result
-  setTimeout(() => {
-    if (gameState.active) {
-      presentNextQuestion();
-    }
-  }, 5000);
+  // Note: Does NOT automatically advance to the next question.
+  // The host advances via POST /api/game/next-question when ready.
 }
 
 /** Compute and broadcast a mini leaderboard of top 10 this session. */
@@ -499,6 +503,35 @@ async function fetchAndGenerateChannelQuotes(channel = 'omaquu', count = 10) {
           break;
         } catch {}
       }
+    }
+  }
+
+  // 3. If samppalandia and static files had no quotes, fetch recent messages via robotty
+  if (!chatData) {
+    try {
+      const rUrl = `https://recent-messages.robotty.de/api/v2/recent-messages/${encodeURIComponent(normChannel)}`;
+      const res = await fetch(rUrl, { signal: AbortSignal.timeout(5000) });
+      if (res.ok) {
+        const rJson = await res.json();
+        if (rJson && Array.isArray(rJson.messages) && rJson.messages.length > 0) {
+          const parsed = [];
+          for (const line of rJson.messages) {
+            const m = line.match(/^(?:@[^ ]+ )?:([^!]+)![^ ]+ PRIVMSG [^ ]+ :(.*)$/);
+            if (m) {
+              const tags = line.startsWith('@') ? line.split(' ')[0] : '';
+              const dnMatch = tags.match(/display-name=([^;]+)/);
+              const author = dnMatch ? dnMatch[1] : m[1];
+              parsed.push({ author, text: m[2], displayName: author, login: m[1] });
+            }
+          }
+          if (parsed.length > 0) {
+            chatData = { ok: true, channel: normChannel, messages: parsed };
+            console.log(`[Quotes] Successfully fetched ${parsed.length} recent Twitch messages via robotty for #${normChannel}`);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn(`[Quotes] Robotty fetch for #${normChannel} failed (${err.message})`);
     }
   }
 
@@ -1117,6 +1150,11 @@ app.post('/api/game/answer', (req, res) => {
   const answer = (req.body.answer || '').toUpperCase();
   if (!['A','B','C','D'].includes(answer)) {
     return res.status(400).json({ success: false, error: 'Invalid answer' });
+  }
+
+  if (gameState.phase === 'voting') {
+    gameState.pendingHostAnswer = answer;
+    return res.json({ success: true, pending: true });
   }
 
   revealAnswer(answer);

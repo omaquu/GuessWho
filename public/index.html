@@ -616,7 +616,7 @@
       </div>
       <div class="led-panel" id="led-streak-panel">
         <span class="led-label" data-i18n="led_streak">Putki</span>
-        <span class="led led-gold" id="led-streak">x1</span>
+        <span class="led led-gold" id="led-streak">x0</span>
       </div>
       <div class="led-panel led-panel-wide">
         <span class="led-label" data-i18n="led_score">Pisteet</span>
@@ -697,6 +697,13 @@
           <!-- Result Indicator -->
           <div id="result-message" style="text-align:center;font-size:1.25rem;font-weight:bold;margin-bottom:14px;min-height:28px;"></div>
 
+          <!-- Next Question Button (Manual Advance) -->
+          <div id="next-question-wrap" style="text-align:center;margin-bottom:18px;display:none;">
+            <button type="button" class="top-btn" id="btn-next-question" onclick="triggerNextQuestion()" style="background:linear-gradient(135deg, #22c55e, #16a34a);border-color:#4ade80;font-size:1.25rem;padding:12px 32px;box-shadow:0 0 24px rgba(34,197,94,0.45);font-family:'Anton',sans-serif;letter-spacing:1px;cursor:pointer;color:#fff;">
+              <span data-i18n="btn_next_question">Seuraava kysymys ➡️</span>
+            </button>
+          </div>
+
           <!-- 4 Classic Diamond Buttons -->
           <div class="answers-grid">
             <button class="diamond-btn" id="opt-A" onclick="selectAnswer('A')">
@@ -738,7 +745,10 @@
           <!-- Live Audience Votes -->
           <div class="vote-stats" id="vote-section">
             <div class="vote-stats-title" id="vote-title" data-i18n="vote_stats_title">👥 Yleisön ja Chatin live-äänet</div>
-            <div class="vote-grid">
+            <div id="vote-hidden-notice" style="color:#94a3b8;font-size:0.92rem;text-align:center;padding:12px 10px;font-style:italic;" data-i18n="votes_hidden_notice">
+              🔒 Äänet paljastetaan vastausajan päätyttyä (tai "Kysy yleisöltä" -oljenkorrella)
+            </div>
+            <div class="vote-grid" id="vote-grid" style="display:none;">
               <div class="vote-bar-col">
                 <div class="vote-bar-track"><div class="vote-bar-fill" id="vbar-A"></div></div>
                 <div class="vote-col-label">A</div>
@@ -859,8 +869,9 @@
     let maxTime = 30;
     let gamePhase = 'waiting';
     let userScore = 0;
-    let userStreak = 1;
+    let userStreak = 0;
     let isBackendConnected = false;
+    let votesRevealed = false; // true only after answer_reveal or askAudience lifeline
 
     // -------------------------------------------------------------------------
     // Language Switcher Toggle
@@ -1172,7 +1183,7 @@
       }
 
       if (state.lifelines) renderLifelines(state.lifelines);
-      updateVoteBars(state.votes || {});
+      if (votesRevealed) updateVoteBars(state.votes || {});
       updateLadder(state.questionNumber);
     }
 
@@ -1208,6 +1219,17 @@
 
       const banner = document.getElementById('lifeline-banner');
       if (banner) banner.style.display = 'none';
+
+      // Hide vote bars until revealed (answer_reveal or askAudience lifeline)
+      votesRevealed = false;
+      const voteGrid = document.getElementById('vote-grid');
+      const voteNotice = document.getElementById('vote-hidden-notice');
+      if (voteGrid) voteGrid.style.display = 'none';
+      if (voteNotice) voteNotice.style.display = 'block';
+
+      // Hide next question button
+      const nqWrap = document.getElementById('next-question-wrap');
+      if (nqWrap) nqWrap.style.display = 'none';
 
       updateVoteBars({ A: 0, B: 0, C: 0, D: 0 });
 
@@ -1253,7 +1275,11 @@
     }
 
     function onVoteUpdate(msg) {
-      updateVoteBars(msg.votes);
+      // Only show vote bars if votes have been revealed (after answer_reveal or askAudience)
+      if (votesRevealed) {
+        updateVoteBars(msg.votes);
+      }
+      // Silently store vote counts internally regardless
     }
 
     function updateVoteBars(votes) {
@@ -1285,24 +1311,58 @@
       const res = document.getElementById('result-message');
       if (myVote) {
         if (myVote === msg.correct) {
-          const earned = msg.questionPoints || currentQuestionPoints || 250;
+          // Streak scoring: 100 + (streak-1)*10, streak resets on wrong
+          userStreak = (userStreak || 0) + 1;
+          const earned = 100 + (userStreak - 1) * 10;
           userScore += earned;
-          userStreak += 1;
           updateUserScore(userScore);
           res.innerHTML = `<span style="color:#10b981;">🌟 ${window.i18n.t('result_correct')} (+${earned} ${window.i18n.lang === 'en' ? 'pts' : 'p'})</span>`;
           window.audioManager.playCorrectSound();
         } else {
           res.innerHTML = `<span style="color:#ef4444;">❌ ${window.i18n.t('result_wrong')} ${msg.correct}</span>`;
-          userStreak = 1;
+          userStreak = 0;
           const wrongBtn = document.getElementById('opt-' + myVote);
           if (wrongBtn) wrongBtn.classList.add('wrong');
           window.audioManager.playWrongSound();
         }
         document.getElementById('led-streak').textContent = `x${userStreak}`;
       } else {
+        userStreak = 0;
+        document.getElementById('led-streak').textContent = `x0`;
         res.innerHTML = `<span style="color:#ffd700;">${window.i18n.t('result_timeout')} ${msg.correct}</span>`;
       }
+
+      // Reveal vote bars
+      votesRevealed = true;
+      const voteGrid = document.getElementById('vote-grid');
+      const voteNotice = document.getElementById('vote-hidden-notice');
+      if (voteGrid) voteGrid.style.display = '';
+      if (voteNotice) voteNotice.style.display = 'none';
       updateVoteBars(msg.votes);
+
+      // If playing with backend, sync score from server results
+      if (msg.playerResults && myUsername) {
+        const myRes = msg.playerResults.find(p => p.username.toLowerCase() === myUsername.toLowerCase());
+        if (myRes) {
+          userScore = myRes.score;
+          updateUserScore(userScore);
+        }
+      }
+
+      // Show "Next Question" button
+      const nqWrap = document.getElementById('next-question-wrap');
+      if (nqWrap) nqWrap.style.display = 'block';
+    }
+
+    function triggerNextQuestion() {
+      const nqWrap = document.getElementById('next-question-wrap');
+      if (nqWrap) nqWrap.style.display = 'none';
+
+      if (isBackendConnected) {
+        fetch('api/game/next-question', { method: 'POST' }).catch(() => {});
+      } else if (window.standaloneEngine && window.standaloneEngine.active) {
+        window.standaloneEngine.nextQuestion();
+      }
     }
 
     function onTimer(timeLeft) {
@@ -1383,6 +1443,13 @@
           vsec.style.boxShadow = '0 0 25px rgba(255, 215, 0, 0.45)';
           vsec.style.borderColor = '#ffd700';
         }
+        // Reveal audience vote bars
+        votesRevealed = true;
+        const voteGrid = document.getElementById('vote-grid');
+        const voteNotice = document.getElementById('vote-hidden-notice');
+        if (voteGrid) voteGrid.style.display = '';
+        if (voteNotice) voteNotice.style.display = 'none';
+        if (d) updateVoteBars(d);
       }
       if (msg.lifeline === 'addTime') {
         if (banner) {
@@ -1431,10 +1498,13 @@
       }
     }
 
-    function getPointsTable(total) {
-      if (total === 5) return [200, 500, 1000, 1800, 3000];
-      if (total === 15) return [100, 200, 300, 450, 650, 900, 1300, 1800, 2500, 3500, 5000, 6500, 8000, 10000, 15000];
-      return [100, 200, 300, 500, 800, 1200, 1800, 2500, 3500, 5000];
+    function getPointsTable(total = 10) {
+      const count = total || 10;
+      const table = [];
+      for (let i = 0; i < count; i++) {
+        table.push(100 + i * 10);
+      }
+      return table;
     }
 
     function renderLadder(totalQuestions, activeQuestionNum) {
@@ -1448,14 +1518,12 @@
 
       for (let q = pts.length; q >= 1; q--) {
         const pointVal = pts[q - 1];
-        const isMilestone = (q === pts.length) || (q === Math.round(pts.length / 2));
         const isTop = q === pts.length;
         const isActive = q === activeQuestionNum;
         const isCompleted = q < activeQuestionNum;
 
         let cls = 'ladder-step';
         if (isTop) cls += ' top-prize';
-        else if (isMilestone) cls += ' milestone';
         if (isActive) cls += ' active';
         if (isCompleted) cls += ' completed';
 
@@ -1519,6 +1587,10 @@
     function openSettingsModal() {
       document.getElementById('cfg-twitch').value = localStorage.getItem('mp_twitch_channel') || 'omaquu';
       document.getElementById('cfg-kick').value = localStorage.getItem('mp_kick_channel') || '';
+      const savedTime = localStorage.getItem('mp_voting_time');
+      if (savedTime && document.getElementById('cfg-time')) {
+        document.getElementById('cfg-time').value = savedTime;
+      }
       document.getElementById('settings-modal').classList.remove('hidden');
     }
 
@@ -1529,6 +1601,12 @@
     function saveSettingsAndConnect() {
       const tw = (document.getElementById('cfg-twitch').value.trim().replace('#', '') || 'omaquu');
       const kc = document.getElementById('cfg-kick').value.trim();
+      const vt = parseInt(document.getElementById('cfg-time')?.value) || 30;
+
+      localStorage.setItem('mp_voting_time', vt);
+      if (window.standaloneEngine) {
+        window.standaloneEngine.votingTime = vt;
+      }
 
       if (tw) {
         localStorage.setItem('mp_twitch_channel', tw);
@@ -1558,6 +1636,11 @@
 
       if (!localStorage.getItem('mp_twitch_channel')) {
         localStorage.setItem('mp_twitch_channel', 'omaquu');
+      }
+
+      const savedTime = localStorage.getItem('mp_voting_time');
+      if (savedTime && document.getElementById('cfg-time')) {
+        document.getElementById('cfg-time').value = savedTime;
       }
 
       const cfgMode = document.getElementById('cfg-mode');
