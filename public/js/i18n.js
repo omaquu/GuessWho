@@ -72,6 +72,13 @@ const translations = {
     my_points_lbl: 'Omat pisteet:',
     voted_locked: 'Vastaus lukittu! Tarkistetaan...',
 
+    // Lock-in confirmation
+    confirm_prefix: 'Valitsit vaihtoehdon',
+    confirm_question: 'Oletko aivan varma? Lukitaanko vastaus?',
+    confirm_btn_yes: 'Kyllä, lukitse vastaus',
+    confirm_btn_no: 'Ei, haluan vaihtaa',
+    status_selected: 'Valitsit vaihtoehdon {letter}. Vahvista lukitus tai valitse toinen!',
+
     // Game Over
     game_over_title: 'PELI PÄÄTTYI!',
     game_over_final_scores: 'Lopulliset tulokset:',
@@ -161,6 +168,13 @@ const translations = {
     ladder_title: '🎯 POINTS LADDER',
     my_points_lbl: 'My Points:',
     voted_locked: 'Answer locked in! Checking...',
+
+    // Lock-in confirmation
+    confirm_prefix: 'You selected option',
+    confirm_question: 'Are you sure? Is that your final answer?',
+    confirm_btn_yes: 'Yes, final answer',
+    confirm_btn_no: 'No, change answer',
+    status_selected: 'Selected option {letter}. Confirm to lock in or pick another answer!',
 
     // Game Over
     game_over_title: 'GAME OVER!',

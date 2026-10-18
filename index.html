@@ -277,10 +277,30 @@
       box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
       transform: translateY(-2px);
     }
+    .diamond-btn.selected {
+      background: linear-gradient(135deg, #78350f 0%, #451a03 100%) !important;
+      border-color: #f59e0b !important;
+      box-shadow: 0 0 25px rgba(245, 158, 11, 0.6) !important;
+      animation: pulse-select 0.8s infinite alternate;
+    }
+    @keyframes pulse-select {
+      0% { transform: scale(1); box-shadow: 0 0 15px rgba(245, 158, 11, 0.4); }
+      100% { transform: scale(1.02); box-shadow: 0 0 25px rgba(255, 215, 0, 0.8); }
+    }
     .diamond-btn.voted {
-      background: linear-gradient(135deg, #4c1d95 0%, #2e1065 100%) !important;
-      border-color: #c084fc !important;
-      box-shadow: 0 0 20px rgba(192, 132, 252, 0.4);
+      background: linear-gradient(135deg, #b45309 0%, #78350f 100%) !important;
+      border-color: #ffd700 !important;
+      box-shadow: 0 0 25px rgba(255, 215, 0, 0.7) !important;
+    }
+    .confirm-dialog {
+      margin-top: 18px;
+      padding: 16px 20px;
+      border-radius: 12px;
+      background: rgba(17, 24, 48, 0.96);
+      border: 2px solid #ffd700;
+      box-shadow: 0 0 30px rgba(255, 215, 0, 0.35);
+      text-align: center;
+      animation: fade-in 0.25s ease;
     }
     .diamond-btn.correct {
       background: linear-gradient(135deg, #065f46 0%, #064e3b 100%) !important;
@@ -672,22 +692,40 @@
 
           <!-- 4 Classic Diamond Buttons -->
           <div class="answers-grid">
-            <button class="diamond-btn" id="opt-A" onclick="vote('A')">
+            <button class="diamond-btn" id="opt-A" onclick="selectAnswer('A')">
               <span class="letter-badge">A:</span>
               <span class="opt-text" id="text-A">...</span>
             </button>
-            <button class="diamond-btn" id="opt-B" onclick="vote('B')">
+            <button class="diamond-btn" id="opt-B" onclick="selectAnswer('B')">
               <span class="letter-badge">B:</span>
               <span class="opt-text" id="text-B">...</span>
             </button>
-            <button class="diamond-btn" id="opt-C" onclick="vote('C')">
+            <button class="diamond-btn" id="opt-C" onclick="selectAnswer('C')">
               <span class="letter-badge">C:</span>
               <span class="opt-text" id="text-C">...</span>
             </button>
-            <button class="diamond-btn" id="opt-D" onclick="vote('D')">
+            <button class="diamond-btn" id="opt-D" onclick="selectAnswer('D')">
               <span class="letter-badge">D:</span>
               <span class="opt-text" id="text-D">...</span>
             </button>
+          </div>
+
+          <!-- Are You Sure / Confirmation Dialog Box -->
+          <div id="confirm-box" class="confirm-dialog" style="display:none;">
+            <div style="font-size:1.12rem;color:#f3f4f6;margin-bottom:12px;">
+              <span id="confirm-text-prefix" data-i18n="confirm_prefix">Valitsit vaihtoehdon</span>
+              <strong id="confirm-letter" style="color:#ffd700;font-size:1.4rem;margin:0 4px;">A</strong>:
+              <span id="confirm-answer-label" style="font-style:italic;color:#ffd700;">"Vastaus"</span>
+              <div id="confirm-question-label" data-i18n="confirm_question" style="font-size:1.22rem;font-weight:700;color:#fff;margin-top:8px;letter-spacing:0.5px;">Oletko aivan varma? Lukitaanko vastaus?</div>
+            </div>
+            <div style="display:flex;justify-content:center;gap:14px;flex-wrap:wrap;">
+              <button type="button" class="top-btn top-btn-gold" id="btn-confirm-yes" onclick="confirmLockIn()" style="font-size:1.05rem;padding:10px 22px;">
+                🔒 <span id="lbl-confirm-yes" data-i18n="confirm_btn_yes">Kyllä, lukitse vastaus</span>
+              </button>
+              <button type="button" class="top-btn" id="btn-confirm-no" onclick="cancelSelection()" style="font-size:1.05rem;padding:10px 18px;">
+                ↩️ <span id="lbl-confirm-no" data-i18n="confirm_btn_no">Ei, haluan vaihtaa</span>
+              </button>
+            </div>
           </div>
 
           <!-- Live Audience Votes -->
@@ -825,6 +863,15 @@
       window.audioManager?.unlock();
       renderLadder(currentTotalQuestions, currentQuestionNum);
       updateUserScore(userScore);
+
+      const pfx = document.getElementById('confirm-text-prefix');
+      if (pfx) pfx.textContent = window.i18n.t('confirm_prefix');
+      const qlbl = document.getElementById('confirm-question-label');
+      if (qlbl) qlbl.textContent = window.i18n.t('confirm_question');
+      const yesLbl = document.getElementById('lbl-confirm-yes');
+      if (yesLbl) yesLbl.textContent = window.i18n.t('confirm_btn_yes');
+      const noLbl = document.getElementById('lbl-confirm-no');
+      if (noLbl) noLbl.textContent = window.i18n.t('confirm_btn_no');
     }
 
     // -------------------------------------------------------------------------
@@ -920,18 +967,72 @@
     }
 
     // -------------------------------------------------------------------------
-    // Voting Logic
+    // Selection & Lock-In Logic ("Oletko aivan varma?")
     // -------------------------------------------------------------------------
-    function vote(letter) {
-      if (gamePhase !== 'voting' && gamePhase !== 'host_turn') return;
-      if (myVote) return;
-      myVote = letter;
+    let selectedAnswer = null;
+    let isAnswerLocked = false;
 
+    function selectAnswer(letter) {
+      if (gamePhase !== 'voting' && gamePhase !== 'host_turn') return;
+      if (isAnswerLocked) return;
+
+      selectedAnswer = letter;
       window.audioManager.unlock();
+
+      // Style selected button
+      ['A','B','C','D'].forEach(l => {
+        const btn = document.getElementById('opt-' + l);
+        if (btn) btn.classList.toggle('selected', l === letter);
+      });
+
+      // Update and show confirmation dialog
+      const box = document.getElementById('confirm-box');
+      if (box) {
+        document.getElementById('confirm-letter').textContent = letter;
+        const textSpan = document.getElementById('text-' + letter);
+        document.getElementById('confirm-answer-label').textContent = textSpan ? `"${textSpan.textContent}"` : '';
+        box.style.display = 'block';
+        box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      const res = document.getElementById('result-message');
+      if (res) {
+        const tpl = window.i18n.t('status_selected') || 'Valitsit vaihtoehdon {letter}. Vahvista lukitus tai valitse toinen!';
+        res.innerHTML = `<span style="color:#fbbf24;">${tpl.replace('{letter}', letter)}</span>`;
+      }
+    }
+
+    function cancelSelection() {
+      if (isAnswerLocked) return;
+      selectedAnswer = null;
 
       ['A','B','C','D'].forEach(l => {
         const btn = document.getElementById('opt-' + l);
-        if (btn) btn.classList.toggle('voted', l === letter);
+        if (btn) btn.classList.remove('selected');
+      });
+
+      const box = document.getElementById('confirm-box');
+      if (box) box.style.display = 'none';
+
+      const res = document.getElementById('result-message');
+      if (res) res.textContent = '';
+    }
+
+    function confirmLockIn() {
+      if (!selectedAnswer || isAnswerLocked) return;
+      isAnswerLocked = true;
+      myVote = selectedAnswer;
+
+      const box = document.getElementById('confirm-box');
+      if (box) box.style.display = 'none';
+
+      // Style locked button
+      ['A','B','C','D'].forEach(l => {
+        const btn = document.getElementById('opt-' + l);
+        if (btn) {
+          btn.classList.remove('selected');
+          btn.classList.toggle('voted', l === myVote);
+        }
       });
 
       const res = document.getElementById('result-message');
@@ -939,26 +1040,40 @@
         res.innerHTML = `<span style="color:#ffd700;font-size:1.15rem;">🔒 ${window.i18n.t('voted_locked')}</span>`;
       }
 
+      window.audioManager.unlock();
+
       if (isBackendConnected) {
-        send({ type: 'vote', answer: letter });
-        send({ type: 'host_answer', answer: letter });
+        send({ type: 'vote', answer: myVote });
+        send({ type: 'host_answer', answer: myVote });
         fetch('api/game/answer', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ answer: letter })
+          body: JSON.stringify({ answer: myVote })
         }).catch(() => {});
       } else {
         const name = myUsername || (window.i18n.lang === 'fi' ? 'Pelaaja' : 'Player');
-        window.standaloneEngine.handleVote(name, letter, 'guest');
-        window.standaloneEngine.lockInAnswer(letter);
+        window.standaloneEngine.handleVote(name, myVote, 'guest');
+        window.standaloneEngine.lockInAnswer(myVote);
       }
     }
 
-    // Keyboard shortcuts A, B, C, D
+    function vote(letter) {
+      selectAnswer(letter);
+    }
+
+    // Keyboard shortcuts A, B, C, D, Enter, Escape
     window.addEventListener('keydown', (e) => {
       const key = e.key.toUpperCase();
       if (['A','B','C','D'].includes(key) && document.activeElement.tagName !== 'INPUT') {
-        vote(key);
+        selectAnswer(key);
+      } else if (e.key === 'Enter') {
+        if (selectedAnswer && !isAnswerLocked) {
+          confirmLockIn();
+        }
+      } else if (e.key === 'Escape') {
+        if (selectedAnswer && !isAnswerLocked) {
+          cancelSelection();
+        }
       }
     });
 
@@ -1050,7 +1165,12 @@
     let currentQuestionNum = 1;
 
     function onQuestion(msg) {
+      selectedAnswer = null;
+      isAnswerLocked = false;
       myVote = null;
+      const confirmBox = document.getElementById('confirm-box');
+      if (confirmBox) confirmBox.style.display = 'none';
+
       gamePhase = 'voting';
       maxTime = msg.timeLeft;
       currentTotalQuestions = msg.totalQuestions || 10;
@@ -1130,6 +1250,9 @@
       updatePhaseLabel('revealing');
       window.audioManager.stopSuspenseMusic();
 
+      const confirmBox = document.getElementById('confirm-box');
+      if (confirmBox) confirmBox.style.display = 'none';
+
       for (const l of ['A','B','C','D']) {
         const btn = document.getElementById('opt-' + l);
         btn.disabled = true;
@@ -1167,6 +1290,10 @@
       bar.style.background = timeLeft > 10
         ? 'linear-gradient(90deg, #ffd700, #f59e0b)'
         : 'linear-gradient(90deg, #ef4444, #dc2626)';
+
+      if (timeLeft <= 0 && selectedAnswer && !isAnswerLocked) {
+        confirmLockIn();
+      }
     }
 
     function onLeaderboard(top10) {
